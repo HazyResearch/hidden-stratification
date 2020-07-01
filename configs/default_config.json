@@ -1,0 +1,44 @@
+{
+    "exp_dir": "checkpoints/_debug",
+    "seed": 2,
+    "classification_config": {
+        "checkpoint_metric": "val_acc",
+        "optimizer_config": {
+            "class_args": {
+                "lr": 0.002,
+                "weight_decay": 1e-5
+            },
+            "class_name": "Adam"
+        },
+        "criterion_config": {},
+        "eval_only": false,
+        "metric_types": [
+            "loss",
+            "acc"
+        ],
+        "num_epochs": 100,
+        "scheduler_config": {
+            "class_args": {
+                "milestones": [
+                    50,
+                    75
+                ]
+            },
+            "class_name": "MultiStepLR"
+        },
+        "george_config": {
+            "checkpoint_metric": "val_subclass_rob_acc",
+            "optimizer_config": {
+                "class_args": {}
+            },
+            "criterion_config": {}
+        }
+    },
+    "cluster_config": {
+        "metric_types": [
+            "mean_loss",
+            "composition"
+        ],
+        "cluster_by_superclass": true
+    }
+}

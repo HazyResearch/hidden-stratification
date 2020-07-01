@@ -1,0 +1,17 @@
+*.aux
+*.gz
+*.joblib
+*.log
+*.out
+*.png
+.ipynb_checkpoints
+.Rhistory
+__pycache__/
+*.egg-info/
+checkpoints/
+data/
+sandbox/
+
+# temporary files
+._*
+.DS_Store
