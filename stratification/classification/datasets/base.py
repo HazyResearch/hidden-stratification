@@ -1,11 +1,13 @@
 import logging
+import os
 
 import torch
 from torch.utils.data import Dataset
 import numpy as np
+import random
 
 DATA_SPLITS = ['train', 'train_clean', 'val', 'test']
-LABEL_TYPES = ['superclass', 'subclass', 'true_subclass']
+LABEL_TYPES = ['superclass', 'subclass', 'true_subclass', 'alt_subclass']
 
 
 class GEORGEDataset(Dataset):
@@ -26,13 +28,24 @@ class GEORGEDataset(Dataset):
         - the 'subclass' key will be used to compute metrics, as well as for DRO loss
         - the 'true_subclass' key will be used to compute metrics, if available
     """
-    def __init__(self, split, X, Y_dict):
-
+    def __init__(self, name, root, split, transform=None, download=False, ontology='default'):
+        self.name = name
+        self.root = root
+        self.data_dir = os.path.join(self.root, name)
         self.split = split
+        self.transform = transform
         assert self.split in DATA_SPLITS
+        if not self._check_exists():
+            if download:
+                self._download()
+            else:
+                raise ValueError(f'{self.name} dataset not found.')
 
-        self.X = X
-        self.Y_dict = Y_dict
+        self.ontology = ontology
+
+        logging.info(f'Loading {self.split} split of {self.name}')
+        self.X, self.Y_dict = self._load_samples()
+
         assert 'superclass' in self.Y_dict.keys(), \
             "Y_dict['superclass'] must be populated with superclass (target) labels."
 
@@ -42,6 +55,29 @@ class GEORGEDataset(Dataset):
         else:
             logging.info('True subclass unavailable.')
             self.true_subclass_available = False
+        assert (self.true_subclass_available)
+
+        sup_to_true_sub_map = build_sup_to_sub_map(self.Y_dict['superclass'], self.Y_dict['true_subclass'])
+        self._class_maps = {'true_subclass': sup_to_true_sub_map}
+        self._subclass_labels_added = False
+
+    def _check_exists(self):
+        """
+        Checks if the dataset has been initialized.
+        """
+        raise NotImplementedError
+
+    def _download(self):
+        """
+        Downloads the dataset if it could not be found
+        """
+        raise NotImplementedError
+
+    def _load_samples(self):
+        """
+        Loads the X tensor and the Y_dict dictionary for training.
+        """
+        raise NotImplementedError
 
     def __len__(self):
         """
@@ -52,10 +88,9 @@ class GEORGEDataset(Dataset):
 
     def __getitem__(self):
         """
-        Returns the idx-th element in self.X, and the idx-the values in self.Y_dict.
-        Override.
+        Must be overridden.
         """
-        return X[idx], {k: v[idx] for k, v in self.Y_dict.items()}
+        raise NotImplementedError
 
     def add_labels(self, key, values):
         """
@@ -70,7 +105,7 @@ class GEORGEDataset(Dataset):
             values_tensor = torch.tensor(values)
         self.Y_dict[key] = values_tensor
 
-    def add_subclass_labels(self, subclass_labels):
+    def add_subclass_labels(self, subclass_labels, seed=0):
         """
         Adds subclass_labels. If subclass_labels is a string, it must be in 
         {'superclass', 'true_subclass', 'random'}. Else, subclass_labels is a
@@ -84,13 +119,15 @@ class GEORGEDataset(Dataset):
             elif subclass_labels == 'random':
                 self.add_labels(
                     'subclass',
-                    generate_random_labels(self.Y_dict['superclass'], self.Y_dict['true_subclass']))
+                    generate_random_labels(self.Y_dict['superclass'], self.Y_dict['true_subclass'],
+                                           seed=seed))
             else:
                 raise ValueError(f'subclass_labels string {subclass_labels} not recognized.')
         elif subclass_labels is not None:
             self.add_labels('subclass', subclass_labels)
         else:
             raise ValueError(f'subclass_labels object {subclass_labels} not recognized.')
+        self._subclass_labels_added = True
 
     def get_num_classes(self, key):
         return torch.max(self.Y_dict[key]).item() + 1
@@ -103,6 +140,15 @@ class GEORGEDataset(Dataset):
             self.get_num_classes(key)).unsqueeze(1).long())
         return class_map.sum(1).float()
 
+    def get_class_map(self, key):
+        if key in self._class_maps:
+            return self._class_maps[key]
+        else:
+            assert (self._subclass_labels_added)
+            sup_to_sub_map = build_sup_to_sub_map(self.Y_dict['superclass'], self.Y_dict[key])
+            self._class_maps[key] = sup_to_sub_map
+            return sup_to_sub_map
+
 
 def build_sup_to_sub_map(superclass_labels, subclass_labels):
     class_map = {}
@@ -113,11 +159,16 @@ def build_sup_to_sub_map(superclass_labels, subclass_labels):
     return class_map
 
 
-def generate_random_labels(superclass_labels, subclass_labels, proportions=None):
+def generate_random_labels(superclass_labels, subclass_labels, proportions=None, seed=0):
     """
     Build random mock subclass labels for each superclass, with the given proportions.
     If proportions is None, uses the proportions of the given subclass labels.
     """
+    prev_state = random.getstate()
+    random.seed(seed)
+    data_mod_seed = random.randint(0, 2**32)
+    random.seed(data_mod_seed)
+
     superclass_labels, subclass_labels = np.array(superclass_labels), np.array(subclass_labels)
     random_labels = -np.ones_like(superclass_labels)
     superclass_set = sorted(set(superclass_labels))
@@ -145,7 +196,9 @@ def generate_random_labels(superclass_labels, subclass_labels, proportions=None)
             mock_sub[percentile_lower:percentile_upper] = i
         assert (np.all(mock_sub >= 0))
         mock_sub = mock_sub + np.amax(random_labels) + 1  # adjust for previous superclasses
-        np.random.shuffle(mock_sub)
+        random.shuffle(mock_sub)
         random_labels[superclass_indices] = mock_sub
     assert (np.all(random_labels >= 0))
+
+    random.setstate(prev_state)
     return torch.tensor(random_labels)

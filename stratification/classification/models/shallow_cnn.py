@@ -14,7 +14,7 @@ class ShallowCNN(nn.Module):
                          ('c3', nn.Conv2d(6, 8, kernel_size=(5, 5))), ('relu3', nn.ReLU())]))
 
         # Store the name of the layer whose output we want to use as features
-        # (typically the last operation before the fully connected layer)
+        # (typically the last operation before the classification layer)
         self.activation_layer_name = 'convnet.relu3'
         self.fc = nn.Linear(512, classes)
 

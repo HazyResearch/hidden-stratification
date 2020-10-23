@@ -2,6 +2,7 @@
     "exp_dir": "checkpoints/tutorial",
     "seed": 2,
     "classification_config": {
+        "bit_pretrained": true,
         "checkpoint_metric": "val_acc",
         "optimizer_config": {
             "class_args": {
@@ -17,6 +18,7 @@
             "acc"
         ],
         "num_epochs": 20,
+        "batch_size": 128,
         "scheduler_config": {
             "class_args": {
                 "milestones": [
@@ -26,7 +28,7 @@
             },
             "class_name": "MultiStepLR"
         },
-        "george_config": {
+        "gdro_config": {
             "checkpoint_metric": "val_subclass_rob_acc",
             "optimizer_config": {
                 "class_args": {}
@@ -36,9 +38,7 @@
     },
     "cluster_config": {
         "metric_types": [
-            "mean_loss",
             "composition"
-        ],
-        "cluster_by_superclass": true
+        ]
     }
 }

@@ -1,7 +1,5 @@
-import ast
 import json
 import argparse
-
 from jsonargparse import ActionJsonSchema, namespace_to_dict
 
 from .utils import ScientificNotationDecoder, convert_value, set_by_dotted_path

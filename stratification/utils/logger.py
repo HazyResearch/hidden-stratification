@@ -1,10 +1,10 @@
 import os
-import datetime
+import sys
 import logging
 from collections import defaultdict
 from datetime import datetime
-
 import pandas as pd
+
 from .utils import flatten_dict
 
 
@@ -74,7 +74,9 @@ def init_logger(name, save_dir, log_format='full'):
         base_logger = logging.getLogger(name)
         base_logger.addHandler(file_handler)
         base_logger.setLevel(logging.INFO)
-        base_logger.info(f'Logging all output to {log_path}')
-        return FullLogger(base_logger)
+        logger = FullLogger(base_logger)
+        logging.info('')  # seems to be required to initialize logging properly
+        logger.info(f'Logging all output to {log_path}')
+        return logger
     else:
         return SimpleLogger()

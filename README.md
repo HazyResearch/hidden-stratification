@@ -42,19 +42,19 @@ pip install -e .
 We provide a simple demo notebook at `tutorials/Basic-Tutorial.ipynb`.
 This example can also be run as a script:
 ```bash
-python stratification/run.py configs/demo_config.json
+python stratification/demo.py configs/demo_config.json
 ```
 
 ## Configuration options
 
 There are two ways to modify the `config` variable used in the training script. The first method is to directly set config values using the command-line interface. Use `=` to demarcate key-value pairs, and use `.` to access nested dictionaries as specified in the config; for example:
 ```bash
-python stratification/run.py configs/default_config.json exp_dir=checkpoints/new-experiment classification_config.num_epochs=100
+python stratification/demo.py configs/default_config.json exp_dir=checkpoints/new-experiment classification_config.num_epochs=100
 ```
 
 The modified config will be saved at `config['exp_dir']`. For the complete configuration definition, see `stratification/utils/schema.py`.
 
 The second way is to specify a different configuration file. This can be done by simply changing the config path in the command, e.g.:
 ```bash
-python stratification/run.py configs/<ANOTHER_CONFIG>.json
+python stratification/demo.py configs/<ANOTHER_CONFIG>.json
 ```

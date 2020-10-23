@@ -1,7 +1,8 @@
 import torch
+from sklearn.metrics import roc_auc_score
 
 
-class AverageMeter(object):
+class AverageMeter:
     """Computes and stores the average and current value
        Imported from https://github.com/pytorch/examples/blob/master/imagenet/main.py#L247-L262
     """
@@ -19,7 +20,10 @@ class AverageMeter(object):
         self.val = val
         self.sum += val * n
         self.count += n
-        self.avg = self.sum / max(self.count, 1)
+        self.avg = self.sum / self.count if self.count else 0
+
+    def __str__(self):
+        return f'sum: {self.sum}, count: {self.count}, avg: {self.avg}'
 
 
 def compute_accuracy(output, target, topk=(1, ), return_preds=False):
@@ -42,3 +46,16 @@ def compute_accuracy(output, target, topk=(1, ), return_preds=False):
     if return_preds:
         return res, label_preds
     return res
+
+
+def compute_roc_auc(targets, probs):
+    """'Safe' AUROC computation"""
+    if isinstance(targets, torch.Tensor):
+        targets = targets.numpy()
+    if isinstance(probs, torch.Tensor):
+        probs = probs.numpy()
+    try:
+        auroc = roc_auc_score(targets, probs)
+    except ValueError:
+        auroc = -1
+    return auroc

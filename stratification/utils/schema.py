@@ -1,32 +1,71 @@
 schema = {
     'type': 'object',
+    'required': ['exp_dir', 'mode', 'dataset', 'classification_config', 'reduction_config', 'cluster_config'],
     'properties': {
         'seed': {
             'type': 'number',
-            'default': 0
+            'default': -1
+        },
+        'deterministic': {
+            'type': 'boolean',
+            'default': True
+        },
+        'use_cuda': {
+            'type': 'boolean',
+            'default': True
+        },
+        'allow_multigpu': {
+            'type': 'boolean',
+            'default': False
         },
         'exp_dir': {
             'type': 'string',
             'default': 'checkpoints/_debug'
         },
+        'mode': {
+            'type': 'string',
+            'default': 'erm'  # choices: erm, superclass_gdro, true_subclass_gdro, random_gdro, george
+        },
+        'dataset': {
+            'type': 'string',
+            'default': 'mnist'  # choices: celeba, isic, mnist, waterbirds
+        },
+        'activations_dir': {
+            'type': 'string',
+            'default': 'NONE'
+        },
+        'representation_dir': {
+            'type': 'string',
+            'default': 'NONE'
+        },
+        'cluster_dir': {
+            'type': 'string',
+            'default': 'NONE'
+        },
         'classification_config': {
             'type':
             'object',
             'required': [
+                'model',
                 'metric_types',
                 'checkpoint_metric',
                 'eval_only',
                 'num_epochs',
+                'batch_size',
                 'criterion_config',
                 'optimizer_config',
                 'scheduler_config',
             ],
             'properties': {
+                'model': {
+                    'type': 'string',
+                    'default': 'lenet4'
+                },
                 'erm_config': {
                     'type': 'object',
                     'default': {}
                 },
-                'george_config': {
+                'gdro_config': {
                     'type': 'object',
                     'default': {}
                 },
@@ -54,9 +93,21 @@ schema = {
                     'type': 'boolean',
                     'default': False
                 },
+                'ban_reweight': {
+                    'type': 'boolean',
+                    'default': False
+                },
+                'bit_pretrained': {
+                    'type': 'boolean',
+                    'default': False
+                },
                 'num_epochs': {
                     'type': 'number',
                     'default': 20
+                },
+                'workers': {
+                    'type': 'number',
+                    'default': 8
                 },
                 'criterion_config': {
                     'type': 'object',
@@ -69,6 +120,14 @@ schema = {
                             'type': 'boolean',
                             'default': True
                         },
+                        'size_adjustment': {
+                            'type': 'number',
+                            'default': 0
+                        },
+                        'auroc_gdro': {
+                            'type': 'boolean',
+                            'default': False
+                        }
                     }
                 },
                 'optimizer_config': {
@@ -118,22 +177,67 @@ schema = {
                 }
             }
         },
-        'cluster_config': {
+        'reduction_config': {
             'type': 'object',
-            'required': ['metric_types'],
+            'required': ['model'],
             'properties': {
-                'metric_types': {
-                    'type': 'array',
-                    'examples': [['mean_loss', 'composition']]
+                'model': {
+                    'type': 'string',
+                    'default': 'umap'  # choices: "none", "pca", "umap", "hardness"
                 },
-                'cluster_by_superclass': {
-                    'type': 'boolean',
-                    'default': True
+                'components': {
+                    'type': 'number',
+                    'default': 2
                 },
                 'normalize': {
                     'type': 'boolean',
                     'default': True
+                },
+                'mean_reduce': {
+                    'type': 'boolean',
+                    'default': False
                 }
+            }
+        },
+        'cluster_config': {
+            'type': 'object',
+            'required': ['model', 'metric_types'],
+            'properties': {
+                'model': {
+                    'type': 'string',
+                    'default': 'gmm'  # choices: "gmm", "kmeans"
+                },
+                'metric_types': {
+                    'type': 'array',
+                    'examples': [['mean_loss', 'composition']]
+                },
+                'search_k': {
+                    'type': 'boolean',
+                    'default': False
+                },
+                'k': {
+                    'type': 'number',
+                    'default': 10
+                },
+                'sil_cuda': {
+                    'type': 'boolean',
+                    'default': False
+                },
+                'overcluster': {
+                    'type': 'boolean',
+                    'default': False
+                },
+                'overcluster_factor': {
+                    'type': 'number',
+                    'default': 5
+                },
+                'superclasses_to_ignore': {
+                    'type': 'array',
+                    'items': {
+                        'type': 'number'
+                    },
+                    'default': []
+                },
             }
         }
     }
