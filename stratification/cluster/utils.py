@@ -1,5 +1,6 @@
 from collections import Counter
 import numpy as np
+from stratification.cluster.fast_sil import silhouette_samples
 
 
 def get_k_from_model(model):

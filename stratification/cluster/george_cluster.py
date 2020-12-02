@@ -1,22 +1,16 @@
 from copy import deepcopy
 import os
-from collections import Counter, defaultdict
+from collections import defaultdict
 import json
 import logging
 
 import torch
 import numpy as np
-import pandas as pd
-import scipy
-import seaborn as sns
-import matplotlib.pyplot as plt
 
-import stratification.cluster.models.reduction as reduction_models
-import stratification.cluster.models.cluster as cluster_models
+from stratification.cluster.models.cluster import DummyClusterer
 from stratification.cluster.utils import get_cluster_mean_loss, get_cluster_composition, get_k_from_model
 
 from stratification.utils.logger import init_logger
-from stratification.utils.utils import NumpyEncoder
 
 
 class GEORGECluster:
@@ -36,24 +30,6 @@ class GEORGECluster:
         else:
             self.logger = logging.getLogger()
 
-    def preprocess_activations(self, activations):
-        """Preprocesses the activations based on keys in the config.
-        
-        Args:
-            activations(np.ndarray of shape (N, D)): D-dimensional vectors for N
-                samples.
-        
-        Returns:
-            activations(np.ndarray of shape (N, D)): transformed activations.
-        """
-        if len(activations.shape) > 2:
-            activations = activations.reshape(activations.shape[0], -1)
-        if self.config['normalize']:
-            # divide activations by their norm, with a lower threshold for numerical stability
-            act_norms = np.maximum(np.linalg.norm(activations, axis=-1, keepdims=True), 1e-6)
-            activations = activations / act_norms
-        return activations
-
     def compute_metrics(self, inputs, assignments):
         """Computes metrics using the sample data provided in inputs.
 
@@ -71,22 +47,15 @@ class GEORGECluster:
             if metric_type == 'mean_loss':
                 metric = get_cluster_mean_loss(inputs['losses'], assignments)
             elif metric_type == 'composition':
-                metric = get_cluster_composition(inputs['superclass'], assignments)
+                metric = get_cluster_composition(inputs['true_subclass'], assignments)
             else:
                 raise KeyError(f'Unrecognized metric_type {metric_type}')
             metrics[metric_type] = metric
         return metrics
 
-    def train(self, cluster_model, inputs, reduction_model=None):
-        """Fits reduction and cluster models to the data.
-        
-        Note:
-            It is possible to create groups of inputs (see 
-            GEORGECluster.get_groups_as_list). Doing so causes G reduction and cluster
-            models to be instantiated, where G is the number of groups created.
-            At time of implementation, all resulting cluster models will have the same
-            hyperparameters (the same is true for the reduction model).
-        
+    def train(self, cluster_model, inputs):
+        """Fits cluster models to the data of each superclass.
+
         Args:
             cluster_model(Any): The model used to produce cluster assignments. Must
                 implement `fit` and `predict`. Further, the number of clusters the 
@@ -109,50 +78,49 @@ class GEORGECluster:
                 Future work is to further modularize the cluster code to mitigate
                 dependencies on this object. For best results, train classifiers
                 using GEORGEHarness.classify.
-            reduction_model(Any, optional): The model used for dimensionality reduction
-                of the activations. If None, defaults to a NoOpReductionModel, which 
-                simply returns the activations.
             
         Returns:
             group_to_models(List[Tuple[type(cluster_model), type(reduction_model)]]): the list
                 of reduction and cluster models fit on each group, where the idx
                 indicates the group.
         """
-        if reduction_model is None:
-            self.logger.basic_info('Using raw features (no dimensionality reduction)')
-            reduction_model = NoOpReductionModel()
+        orig_cluster_model = cluster_model
+        extra_info = hasattr(cluster_model, 'requires_extra_info')
 
-        group_assignments = self.get_groups_as_list(inputs)
-        group_to_data = self._group(inputs, group_assignments)
-        groups = np.unique(group_assignments)
+        inputs_tr = inputs['train']
+        inputs_val = inputs['val']
 
         group_to_models = []
-        for group in groups:
-            group_data = group_to_data[group]
-            cluster_model, reduction_model = deepcopy(cluster_model), deepcopy(reduction_model)
+        for group, group_data in inputs_tr[0].items():
+            if group in self.config['superclasses_to_ignore']:
+                # Keep this superclass in a single "cluster"
+                self.logger.basic_info(f'Not clustering superclass {group}...')
+                group_to_models.append(DummyClusterer())
+                continue
 
-            # reduce
-            self.logger.basic_info(f'Reducing superclass {group}...')
+            cluster_model = deepcopy(orig_cluster_model)
             activations = group_data['activations']
-            activations = self.preprocess_activations(activations)
-            acts_dtype = activations.dtype
-            reduction_model = reduction_model.fit(activations)
-            activations = reduction_model.transform(activations)
-            activations = activations.astype(acts_dtype)
+
+            if extra_info:
+                val_group_data = inputs_val[0][group]
+                losses = group_data['losses']
+                val_activations = val_group_data['activations']
+                kwargs = {'val_activ': val_activations, 'losses': losses}
+            else:
+                kwargs = {}
 
             # cluster
             self.logger.basic_info(f'Clustering superclass {group}...')
-            cluster_model = cluster_model.fit(activations)
-            group_to_models.append((cluster_model, reduction_model))
+            cluster_model = cluster_model.fit(activations, **kwargs)
+            group_to_models.append(cluster_model)
 
-        self._save(group_to_models, 'clusters.pt')
         return group_to_models
 
-    def evaluate(self, group_to_models, inputs):
+    def evaluate(self, group_to_models, split_inputs):
         """Returns cluster assignments for each of the inputs.
         
         Args:
-            group_to_models(List[Tuple[type(cluster_model), type(reduction_model)]]):
+            group_to_models(List[reduction_model]):
                 the models produced by GEORGECluster.train. There should be as many
                 items in this list as groups in the inputs.
             inputs(Dict[str, Sequence]): inputs of the same format as those described in
@@ -164,31 +132,16 @@ class GEORGECluster:
                 the outputs consists of both the reduced activations and the cluster
                 assignments (`activations` and `assignments` keys, respectively).
         """
-        group_assignments = self.get_groups_as_list(inputs)
-        group_to_data = self._group(inputs, group_assignments)
-        groups = np.unique(group_assignments)
-        assert len(group_to_models) <= len(groups), \
-            'There must be a model for each group in the input data.'
-
+        group_to_data, group_assignments = split_inputs
         group_to_metrics = {}
         group_to_outputs = {}
         cluster_floor = 0
-        for group in groups:
+        for group, group_data in group_to_data.items():
             self.logger.info(f'Evaluating group {group}...')
-            group_outputs = {}
-            group_data = group_to_data[group]
-            cluster_model, reduction_model = group_to_models[group]
 
-            # reduce
-            activations = group_data['activations']
-            activations = self.preprocess_activations(activations)
-            acts_dtype = activations.dtype
-            activations = reduction_model.transform(activations)
-            activations = activations.astype(acts_dtype)
-            group_outputs['activations'] = activations
-
-            # cluster
-            assignments = np.array(cluster_model.predict(activations))
+            group_outputs = group_data.copy()
+            cluster_model = group_to_models[group]
+            assignments = np.array(cluster_model.predict(group_data['activations']))
             group_outputs['assignments'] = cluster_floor + assignments
 
             group_to_outputs[group] = group_outputs
@@ -201,54 +154,15 @@ class GEORGECluster:
         outputs = self._ungroup(group_to_outputs, group_assignments)
         return group_to_metrics, outputs
 
-    def get_groups_as_list(self, data):
-        """Returns the group assignments of data"""
-        if self.config['cluster_by_superclass']:
-            self.logger.info('Grouping samples by given superclass...')
-            group_assignments = data['superclass']
-        else:
-            self.logger.info('Treating samples as one group...')
-            group_assignments = np.zeros_like(data['superclass'])
-        return group_assignments
-
-    def _group(self, data, group_assignments):
-        """Partitions the data by group.
-        
-        Note: 
-            this function assumes that the data is a dictionary of sequences.
-            By design, any key-value pair that doesn't describe a sequence is
-            ignored in the final partition.
-        
-        Args:
-            data(Dict[str, Sequence]): A dictionary of sequences with the same
-                length of `group_assignments`.
-            group_assignments(Sequence[int]): A list of assignments of data,
-                where `group_assignments[idx]` is the group of data[idx].
-            
-        Returns:
-            group_to_data(Dict[int, Dict[str, Sequence]]): the data, partitioned by group.
-                Note that the grouped data is still in the same order as it
-                was before partitioning.
-        """
-        groups = np.unique(group_assignments)
-        group_to_data = defaultdict(dict)
-        for group in groups:
-            for k, v in data.items():
-                if isinstance(v, np.ndarray):
-                    assert len(group_assignments) == len(v), \
-                        f'group_assignments and "{k}" must be the same length'
-                    group_to_data[group][k] = v[group_assignments == group]
-        return group_to_data
-
     def _ungroup(self, group_to_data, group_assignments):
         """Ungroups data that is partitioned by group.
-        
+
         Args:
             group_to_data(Dict[int, Dict[str, Sequence]]) a partitioned
-                group of data, likely the object returned by GEORGECluster._group
+                group of data, i.e. the object returned by GEORGEReduce._group
             group_assignments(Sequence[int]): A list of assignments of data,
                 where `group_assignments[idx]` is the group of data[idx].
-        
+
         Returns:
             data(Dict[str, Sequence]): A dictionary of sequences with the same
                 length of `group_assignments`.
@@ -265,13 +179,5 @@ class GEORGECluster:
         # format
         for k, v in data.items():
             data[k] = np.array(v)
-        return data
 
-    def _save(self, data, filename):
-        """If self.save_dir is not None, saves `data`."""
-        if self.save_dir is not None:
-            filepath = os.path.join(self.save_dir, filename)
-            self.logger.basic_info(f'Saving checkpoint to {filepath}...')
-            torch.save(data, filepath)
-        else:
-            self.logger.basic_info('save_dir not initialized. Skipping save step.')
+        return data

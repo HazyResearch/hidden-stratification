@@ -1,10 +1,10 @@
 import os
-import datetime
+import sys
 import logging
 from collections import defaultdict
 from datetime import datetime
-
 import pandas as pd
+
 from .utils import flatten_dict
 
 
@@ -32,7 +32,7 @@ class EpochCSVLogger:
 
 class SimpleLogger:
     def __init__(self):
-        pass
+        self.type = 'simple'
 
     def basic_info(self, message):
         print(message)
@@ -47,6 +47,7 @@ class SimpleLogger:
 class FullLogger:
     '''Wrapper class for Python logger'''
     def __init__(self, logger):
+        self.type = 'full'
         self.logger = logger
 
     def basic_info(self, message):
@@ -74,7 +75,9 @@ def init_logger(name, save_dir, log_format='full'):
         base_logger = logging.getLogger(name)
         base_logger.addHandler(file_handler)
         base_logger.setLevel(logging.INFO)
-        base_logger.info(f'Logging all output to {log_path}')
-        return FullLogger(base_logger)
+        logger = FullLogger(base_logger)
+        logging.info('')  # seems to be required to initialize logging properly
+        logger.info(f'Logging all output to {log_path}')
+        return logger
     else:
         return SimpleLogger()

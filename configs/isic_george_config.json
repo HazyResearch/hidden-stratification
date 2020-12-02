@@ -1,0 +1,60 @@
+{
+    "exp_dir": "checkpoints/isic",
+    "dataset": "isic",
+    "mode": "george",
+    "seed": 0,
+    "classification_config": {
+        "model": "resnet50",
+        "checkpoint_metric": "val_auroc",
+        "optimizer_config": {
+            "class_args": {
+                "lr": 0.001,
+                "weight_decay": 0.001,
+                "momentum": 0.9
+            },
+            "class_name": "SGD"
+        },
+        "workers": 8,
+        "criterion_config": {},
+        "eval_only": false,
+        "metric_types": [
+            "loss",
+            "acc"
+        ],
+        "num_epochs": 20,
+        "batch_size": 16,
+        "scheduler_config": {
+            "class_args": {
+                "milestones": [15]
+            },
+            "class_name": "MultiStepLR"
+        },
+        "gdro_config": {
+            "checkpoint_metric": "val_subclass_rob_auroc",
+            "optimizer_config": {
+                "class_args": {
+                    "lr": 0.0005,
+                    "weight_decay": 0.001
+                }
+            },
+            "criterion_config": {
+                "size_adjustment": 0,
+                "auroc_gdro": true
+            }
+        },
+        "dataset_config": {}
+    },
+    "reduction_config": {
+        "model": "umap"
+    },
+    "cluster_config": {
+        "model": "gmm",
+        "metric_types": [
+            "mean_loss",
+            "composition"
+        ],
+        "search_k": true,
+        "overcluster": true,
+        "superclasses_to_ignore": [1]
+    }
+}

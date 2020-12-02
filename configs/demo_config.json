@@ -1,7 +1,10 @@
 {
     "exp_dir": "checkpoints/tutorial",
-    "seed": 2,
+    "dataset": "mnist",
+    "mode": "george",
+    "seed": 0,
     "classification_config": {
+        "model": "shallow_cnn",
         "checkpoint_metric": "val_acc",
         "optimizer_config": {
             "class_args": {
@@ -17,6 +20,7 @@
             "acc"
         ],
         "num_epochs": 20,
+        "batch_size": 128,
         "scheduler_config": {
             "class_args": {
                 "milestones": [
@@ -26,19 +30,25 @@
             },
             "class_name": "MultiStepLR"
         },
-        "george_config": {
+        "gdro_config": {
             "checkpoint_metric": "val_subclass_rob_acc",
             "optimizer_config": {
                 "class_args": {}
             },
             "criterion_config": {}
+        },
+        "dataset_config": {
+            "subsample_8": false,
+            "resize": false
         }
     },
+    "reduction_config": {
+        "model": "umap"
+    },
     "cluster_config": {
+        "model": "gmm",
         "metric_types": [
-            "mean_loss",
             "composition"
-        ],
-        "cluster_by_superclass": true
+        ]
     }
 }

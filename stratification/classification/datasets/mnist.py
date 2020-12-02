@@ -8,6 +8,7 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 import torch
+from torchvision import transforms
 from torchvision.datasets.utils import download_and_extract_archive
 
 from .base import GEORGEDataset
@@ -21,7 +22,6 @@ class MNISTDataset(GEORGEDataset):
     
     See <https://pytorch.org/docs/stable/_modules/torchvision/datasets/mnist.html>.
     """
-    base_folder = 'mnist'
     resources = [('http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz',
                   'f68b3c2dcbeaaa9fbdd348bbdeb94873'),
                  ('http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz',
@@ -30,56 +30,50 @@ class MNISTDataset(GEORGEDataset):
                   '9fb629c4189551a2d022fa330f9573f3'),
                  ('http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz',
                   'ec29112dd5afa0611ce80d1b7f02629c')]
-
-    training_file = 'training.pt'
-    test_file = 'test.pt'
     true_subclass_names = [
         '0 - zero', '1 - one', '2 - two', '3 - three', '4 - four', '5 - five', '6 - six',
         '7 - seven', '8 - eight', '9 - nine'
     ]
-    _input_key = 'image'
     _channels = 1
     _resolution = 28
     _normalization_stats = {'mean': (0.1307, ), 'std': (0.3081, )}
     _pil_mode = "L"
 
-    def __init__(self, root, split, transform=None, download=False, subclass_proportions={},
-                 superclass_id='five-comp'):
-        self.root = root
-        self.split = split
-        self.transform = transform
+    def __init__(self, root, split, transform=None, resize=True, download=False, subsample_8=False,
+                 ontology='five-comp', augment=False):
+        assert (transform is None)
+        transform = get_transform_MNIST(resize=resize, augment=augment)
+        self.subclass_proportions = {8: 0.05} if ('train' in split and subsample_8) else {}
+        super().__init__('MNIST', root, split, transform=transform, download=download,
+                         ontology=ontology)
 
-        if not self._check_exists():
-            if download:
-                self.download()
-                self.create_val_split()
-            else:
-                raise RuntimeError('Dataset not found.' +
-                                   ' You can use download=True to download it')
-
+    def _load_samples(self):
+        """Loads the U-MNIST dataset from the data file created by self._download"""
         data_file = f'{self.split}.pt'
+        logging.info(f'Loading {self.split} split...')
         data, original_labels = torch.load(os.path.join(self.processed_folder, data_file))
 
-        # subsample some subset of subclasses
-        logging.info(f'Loading {split} split of U-MNIST')
-        logging.info(f'Original label counts:')
+        logging.info('Original label counts:')
         logging.info(np.bincount(original_labels))
-        if subclass_proportions:
-            logging.info(f'Subsampling subclasses: {subclass_proportions}')
+
+        # subsample some subset of subclasses
+        if self.subclass_proportions:
+            logging.info(f'Subsampling subclasses: {self.subclass_proportions}')
             data, original_labels = self.subsample_digits(data, original_labels,
-                                                          subclass_proportions)
+                                                          self.subclass_proportions)
+            logging.info('New label counts:')
             logging.info(np.bincount(original_labels))
 
         # determine superclass partition of original_labels
-        if superclass_id == 'five-comp':
+        if self.ontology == 'five-comp':
             superclass_labels = (original_labels > 4).long()
+            self.superclass_names = ['< 5', '≥ 5']
         else:
-            raise ValueError(f'superclass id {superclass_id} not recognized.')
+            raise ValueError(f'Ontology {self.ontology} not supported.')
 
         X = data
         Y_dict = {'superclass': superclass_labels, 'true_subclass': original_labels.clone()}
-
-        super().__init__(split, X=X, Y_dict=Y_dict)
+        return X, Y_dict
 
     def __getitem__(self, idx):
         """
@@ -102,18 +96,18 @@ class MNISTDataset(GEORGEDataset):
     def subsample_digits(self, data, labels, subclass_proportions, seed=0):
         prev_state = random.getstate()
         random.seed(seed)
+        data_mod_seed = random.randint(0, 2**32)
+        random.seed(data_mod_seed)
 
-        new_data = []
-        new_labels = []
-        for label in np.unique(labels):
+        for label, freq in subclass_proportions.items():
+            logging.info(f'Subsampling {label} fine class, keeping {freq*100} percent...')
             inds = [i for i, x in enumerate(labels) if x == label]
-            if label in subclass_proportions:
-                inds = random.sample(inds, int(subclass_proportions[label] * len(inds)))
-            new_data.append(data[inds])
-            new_labels.append(labels[inds])
+            inds = set(random.sample(inds, int((1 - freq) * len(inds))))
+            labels = torch.tensor([lab for i, lab in enumerate(labels) if i not in inds])
+            data = torch.stack([datum for i, datum in enumerate(data) if i not in inds])
 
         random.setstate(prev_state)
-        return torch.cat(new_data), torch.cat(new_labels)
+        return data, labels
 
     @property
     def raw_folder(self):
@@ -128,7 +122,7 @@ class MNISTDataset(GEORGEDataset):
             os.path.exists(os.path.join(self.processed_folder, f'{split}.pt'))
             for split in ['train', 'val', 'test'])
 
-    def download(self):
+    def _download(self):
         if self._check_exists():
             return
 
@@ -153,7 +147,9 @@ class MNISTDataset(GEORGEDataset):
             torch.save(test_set, f)
         logging.info('Done downloading!')
 
-    def create_val_split(self, seed=0, val_proportion=0.2):
+        self._create_val_split()
+
+    def _create_val_split(self, seed=0, val_proportion=0.2):
         data, original_labels = torch.load(os.path.join(self.processed_folder, 'train.pt'))
         original_labels = original_labels.numpy()
         original_label_counts = np.bincount(original_labels)
@@ -262,3 +258,20 @@ def open_maybe_compressed_file(path):
         import lzma
         return lzma.open(path, 'rb')
     return open(path, 'rb')
+
+
+def get_transform_MNIST(resize=True, augment=False):
+    test_transform_list = [
+        transforms.ToTensor(),
+        transforms.Normalize(**MNISTDataset._normalization_stats)
+    ]
+    if resize:
+        test_transform_list.insert(0, transforms.Resize((32, 32)))
+    if not augment:
+        return transforms.Compose(test_transform_list)
+
+    train_transform_list = [
+        transforms.RandomCrop(MNISTDataset._resolution, padding=4),
+        transforms.RandomHorizontalFlip()
+    ] + test_transform_list
+    return transforms.Compose(train_transform_list)

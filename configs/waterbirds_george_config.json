@@ -1,0 +1,57 @@
+{
+    "exp_dir": "checkpoints/waterbirds",
+    "dataset": "waterbirds",
+    "mode": "george",
+    "seed": 0,
+    "classification_config": {
+        "model": "resnet50",
+        "checkpoint_metric": "val_acc_rw",
+        "optimizer_config": {
+            "class_args": {
+                "lr": 1e-5,
+                "weight_decay": 1.0,
+                "momentum": 0.9
+            },
+            "class_name": "SGD"
+        },
+        "workers": 8,
+        "criterion_config": {},
+        "eval_only": false,
+        "metric_types": [
+            "loss",
+            "acc"
+        ],
+        "num_epochs": 300,
+        "batch_size": 128,
+        "scheduler_config": {
+            "class_args": {
+                "milestones": []
+            },
+            "class_name": "MultiStepLR"
+        },
+        "gdro_config": {
+            "checkpoint_metric": "val_subclass_rob_acc_rw",
+            "optimizer_config": {
+                "class_args": {}
+            },
+            "criterion_config": {
+                "size_adjustment": 2
+            },
+            "uniform_group_sampling": true
+        },
+        "dataset_config": {}
+    },
+    "reduction_config": {
+        "model": "hardness",
+        "components": 1,
+        "normalize": false
+    },
+    "cluster_config": {
+        "model": "gmm",
+        "metric_types": [
+            "mean_loss",
+            "composition"
+        ],
+        "search_k": true
+    }
+}

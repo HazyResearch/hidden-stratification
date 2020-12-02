@@ -159,7 +159,7 @@ def get_git_commit_info():
 
 
 def set_seed(seed, use_cuda):
-    if seed is None:
+    if seed is None or seed < 0:
         random.seed(time.perf_counter())
         seed = random.randint(0, 100000)
     random.seed(seed)
@@ -169,12 +169,12 @@ def set_seed(seed, use_cuda):
         torch.cuda.manual_seed_all(seed)
 
 
-def init_cuda(deterministic):
+def init_cuda(deterministic, allow_multigpu=False):
     use_cuda = torch.cuda.is_available()
     if use_cuda:
         torch.backends.cudnn.deterministic = deterministic
         torch.backends.cudnn.benchmark = not deterministic
-    if torch.cuda.device_count() > 1:
+    if torch.cuda.device_count() > 1 and not allow_multigpu:
         raise RuntimeError('Multi-GPU training unsupported. Run with CUDA_VISIBLE_DEVICES=X')
     return use_cuda
 
@@ -243,7 +243,7 @@ def flatten_dict(d, parent_key='', sep='_'):
 
 def concatenate_iterable(list_of_iterables):
     if isinstance(list_of_iterables[0], torch.Tensor):
-        return torch.cat(list_of_iterables).detach().cpu().numpy()
+        return torch.cat([x.detach().cpu() for x in list_of_iterables]).numpy()
     elif isinstance(list_of_iterables[0], np.ndarray):
         return np.concatenate(list_of_iterables)
     elif isinstance(list_of_iterables[0], list):

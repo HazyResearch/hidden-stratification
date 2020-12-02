@@ -1,0 +1,60 @@
+{
+    "exp_dir": "checkpoints/celebA",
+    "dataset": "celeba",
+    "mode": "george",
+    "seed": 0,
+    "allow_multigpu": true,
+    "classification_config": {
+        "model": "resnet50",
+        "checkpoint_metric": "val_acc",
+        "bit_pretrained": true,
+        "optimizer_config": {
+            "class_args": {
+                "lr": 1e-5,
+                "weight_decay": 0.1,
+                "momentum": 0.9
+            },
+            "class_name": "SGD"
+        },
+        "workers": 8,
+        "criterion_config": {},
+        "eval_only": false,
+        "metric_types": [
+            "loss",
+            "acc"
+        ],
+        "num_epochs": 50,
+        "batch_size": 128,
+        "scheduler_config": {
+            "class_args": {
+                "milestones": []
+            },
+            "class_name": "MultiStepLR"
+        },
+        "gdro_config": {
+            "checkpoint_metric": "val_subclass_rob_acc",
+            "bit_pretrained": false,
+            "optimizer_config": {
+                "class_args": {}
+            },
+            "criterion_config": {
+                "size_adjustment": 3
+            },
+            "uniform_group_sampling": true
+        },
+        "dataset_config": {}
+    },
+    "reduction_config": {
+        "model": "none"
+    },
+    "cluster_config": {
+        "model": "kmeans",
+        "metric_types": [
+            "mean_loss",
+            "composition"
+        ],
+        "search_k": true,
+        "overcluster": true,
+        "sil_cuda": true
+    }
+}

@@ -1,0 +1,55 @@
+{
+    "exp_dir": "checkpoints/mnist",
+    "dataset": "mnist",
+    "mode": "george",
+    "seed": 0,
+    "classification_config": {
+        "model": "lenet4",
+        "checkpoint_metric": "val_acc_rw",
+        "optimizer_config": {
+            "class_args": {
+                "lr": 0.002,
+                "weight_decay": 1e-5
+            },
+            "class_name": "Adam"
+        },
+        "criterion_config": {},
+        "workers": 8,
+        "eval_only": false,
+        "metric_types": [
+            "loss",
+            "acc"
+        ],
+        "num_epochs": 100,
+        "batch_size": 128,
+        "scheduler_config": {
+            "class_args": {
+                "milestones": [
+                    50,
+                    75
+                ]
+            },
+            "class_name": "MultiStepLR"
+        },
+        "gdro_config": {
+            "checkpoint_metric": "val_subclass_rob_acc_rw",
+            "optimizer_config": {
+                "class_args": {}
+            },
+            "criterion_config": {}
+        },
+        "dataset_config": {}
+    },
+    "reduction_config": {
+        "model": "umap"
+    },
+    "cluster_config": {
+        "model": "gmm",
+        "metric_types": [
+            "mean_loss",
+            "composition"
+        ],
+        "search_k": true,
+        "overcluster": true
+    }
+}

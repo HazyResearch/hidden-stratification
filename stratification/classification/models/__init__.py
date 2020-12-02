@@ -1,4 +1,4 @@
-from torchvision.models import resnet50
-from .lenet5 import LeNet5
+from .lenet import LeNet4
 from .shallow_cnn import ShallowCNN
-# More models coming soon!
+from .pt_resnet import PyTorchResNet
+from .bit_pytorch_models import BiTResNet
