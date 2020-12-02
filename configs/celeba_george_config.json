@@ -41,7 +41,8 @@
                 "size_adjustment": 3
             },
             "uniform_group_sampling": true
-        }
+        },
+        "dataset_config": {}
     },
     "reduction_config": {
         "model": "none"

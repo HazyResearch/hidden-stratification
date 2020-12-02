@@ -2,6 +2,7 @@
 *.gz
 *.joblib
 *.log
+*.npz
 *.out
 *.png
 .ipynb_checkpoints

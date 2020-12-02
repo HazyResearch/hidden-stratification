@@ -1,6 +1,8 @@
 schema = {
-    'type': 'object',
-    'required': ['exp_dir', 'mode', 'dataset', 'classification_config', 'reduction_config', 'cluster_config'],
+    'type':
+    'object',
+    'required':
+    ['exp_dir', 'mode', 'dataset', 'classification_config', 'reduction_config', 'cluster_config'],
     'properties': {
         'seed': {
             'type': 'number',
@@ -24,7 +26,8 @@ schema = {
         },
         'mode': {
             'type': 'string',
-            'default': 'erm'  # choices: erm, superclass_gdro, true_subclass_gdro, random_gdro, george
+            'default':
+            'erm'  # choices: erm, superclass_gdro, true_subclass_gdro, random_gdro, george
         },
         'dataset': {
             'type': 'string',
@@ -55,6 +58,7 @@ schema = {
                 'criterion_config',
                 'optimizer_config',
                 'scheduler_config',
+                'dataset_config',
             ],
             'properties': {
                 'model': {
@@ -69,18 +73,6 @@ schema = {
                     'type': 'object',
                     'default': {}
                 },
-                'random_dro_config': {
-                    'type': 'object',
-                    'default': {}
-                },
-                'superclass_dro_config': {
-                    'type': 'object',
-                    'default': {}
-                },
-                'true_subclass_dro_config': {
-                    'type': 'object',
-                    'default': {}
-                },
                 'metric_types': {
                     'type': 'array',
                     'examples': [['acc', 'loss']]
@@ -90,6 +82,22 @@ schema = {
                     'examples': ['train_acc', 'train_loss', 'val_acc', 'val_loss']
                 },
                 'eval_only': {
+                    'type': 'boolean',
+                    'default': False
+                },
+                'eval_mode': {
+                    'type':
+                    'string',
+                    'default':
+                    'best',
+                    'examples': [
+                        'best', 'best_val_acc', 'best_val_subclass_rob_acc', 'best_val_acc_rw',
+                        'best_val_subclass_rob_acc_rw', 'best_val_true_subclass_rob_acc',
+                        'best_val_auroc', 'best_val_subclass_rob_auroc',
+                        'best_val_true_subclass_rob_auroc', 'best_val_alt_subclass_rob_auroc'
+                    ],
+                },
+                'save_act_only': {
                     'type': 'boolean',
                     'default': False
                 },
@@ -108,6 +116,10 @@ schema = {
                 'workers': {
                     'type': 'number',
                     'default': 8
+                },
+                'dataset_config': {
+                    'type': 'object',
+                    'properties': {}
                 },
                 'criterion_config': {
                     'type': 'object',

@@ -37,7 +37,8 @@
                 "class_args": {}
             },
             "criterion_config": {}
-        }
+        },
+        "dataset_config": {}
     },
     "reduction_config": {
         "model": "umap"

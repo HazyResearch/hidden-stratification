@@ -23,7 +23,8 @@ class WaterbirdsDataset(GEORGEDataset):
     _df_attr_keys = ['y', 'place']
     split_dict = {'train': 0, 'val': 1, 'test': 2}
 
-    def __init__(self, root, split, transform=None, download=False, ontology='default', augment=False):
+    def __init__(self, root, split, transform=None, download=False, ontology='default',
+                 augment=False):
         assert (transform is None)
         transform = get_transform_cub()
         super().__init__('waterbirds', root, split, transform=transform, download=download,

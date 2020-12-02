@@ -17,8 +17,8 @@ class CelebADataset(GEORGEDataset):
     """
     superclass_names = ['No Blond Hair', 'Blond Hair']
     true_subclass_names = [
-        'Blond_Hair = 0, Male = 0', 'Blond_Hair = 0, Male = 1',
-        'Blond_Hair = 1, Male = 0', 'Blond_Hair = 1, Male = 1'
+        'Blond_Hair = 0, Male = 0', 'Blond_Hair = 0, Male = 1', 'Blond_Hair = 1, Male = 0',
+        'Blond_Hair = 1, Male = 1'
     ]
     _channels = 3
     _resolution = 224
@@ -83,8 +83,10 @@ class CelebADataset(GEORGEDataset):
         split_indices = split_array == split_dict[self.split]
 
         X = filename_array[split_indices]
-        Y_dict = {'superclass': torch.tensor(y_array[split_indices]),
-                  'true_subclass': torch.tensor(group_array[split_indices])}
+        Y_dict = {
+            'superclass': torch.tensor(y_array[split_indices]),
+            'true_subclass': torch.tensor(group_array[split_indices])
+        }
         return X, Y_dict
 
     def __getitem__(self, idx):

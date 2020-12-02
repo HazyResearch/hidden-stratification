@@ -22,8 +22,11 @@ PROGRESS_BAR_SUFFIX = '({batch}/{size}) Time {total:} | ETA {eta:} | ' \
                       'Loss: {loss:.3f} | R Loss: {subclass_rob_loss:.3f} | ' \
                       'Acc: {acc:.3f} | RW acc: {acc_rw:.3f} | R acc: {subclass_rob_acc:.3f} | ' \
                       'RW R acc: {subclass_rob_acc_rw:.3f} | TR acc: {true_subclass_rob_acc:.3f}'
-prog_metric_names = ['loss', 'subclass_rob_loss', 'acc', 'acc_rw', 'subclass_rob_acc',
-                     'subclass_rob_acc_rw', 'true_subclass_rob_acc']
+prog_metric_names = [
+    'loss', 'subclass_rob_loss', 'acc', 'acc_rw', 'subclass_rob_acc', 'subclass_rob_acc_rw',
+    'true_subclass_rob_acc'
+]
+
 
 def init_optimizer(optimizer_config, model):
     """Initializes the optimizer."""
@@ -76,7 +79,9 @@ def register_save_activations_hook(model, model_activation_layer, activations_li
         activations_list.append(out.view(out.size(0), -1))
 
     for name, m in model.named_modules():
-        if name == model_activation_layer or (isinstance(model, torch.nn.DataParallel) and name.replace('module.', '') == model_activation_layer):
+        if name == model_activation_layer or \
+          (isinstance(model, torch.nn.DataParallel) and \
+           name.replace('module.', '') == model_activation_layer):
             return m.register_forward_hook(save_activations)
     return None
 
@@ -151,10 +156,14 @@ class GEORGEClassification:
 
         num_epochs = self.config['num_epochs']
         checkpoint_metric = self.config['checkpoint_metric']
+        use_cuda = next(model.parameters()).is_cuda
 
-        train_props = np.bincount(np.array(train_dataloader.dataset.Y_dict['true_subclass'])) / len(train_dataloader.dataset)
-        val_props = np.bincount(np.array(val_dataloader.dataset.Y_dict['true_subclass'])) / len(val_dataloader.dataset)
-        reweight = torch.tensor(train_props / val_props).cuda()
+        train_props = np.bincount(np.array(train_dataloader.dataset.Y_dict['true_subclass'])) / len(
+            train_dataloader.dataset)
+        val_props = np.bincount(np.array(val_dataloader.dataset.Y_dict['true_subclass'])) / len(
+            val_dataloader.dataset)
+        reweight = torch.tensor(train_props / val_props)
+        if use_cuda: reweight = reweight.cuda()
 
         self.logger.basic_info('Starting training.')
         for epoch in range(num_epochs):
@@ -181,7 +190,7 @@ class GEORGEClassification:
             self._checkpoint(model, metrics, checkpoint_metric, epoch)
             self.epoch_logger.append({'learning_rate': cur_lr, **metrics})
 
-        torch.cuda.empty_cache()
+        if use_cuda: torch.cuda.empty_cache()
 
         best_model_path = os.path.join(self.save_dir, 'best_model.pt')
         if os.path.exists(best_model_path):
@@ -192,8 +201,8 @@ class GEORGEClassification:
             self.logger.basic_info('Training complete. No best model found.')
         return model
 
-    def evaluate(self, model, dataloaders, split, robust=False, save_activations=False, bit_pretrained=False,
-                 adv_metrics=False, ban_reweight=False):
+    def evaluate(self, model, dataloaders, split, robust=False, save_activations=False,
+                 bit_pretrained=False, adv_metrics=False, ban_reweight=False):
         """Evaluates the model.
         
         Note:
@@ -223,18 +232,22 @@ class GEORGEClassification:
             self.criterion = init_criterion(self.config['criterion_config'], robust,
                                             dataloader.dataset, self.use_cuda)
 
-        train_props = np.bincount(np.array(dataloaders['train'].dataset.Y_dict['true_subclass'])) / len(dataloaders['train'].dataset)
-        split_props = np.bincount(np.array(dataloader.dataset.Y_dict['true_subclass'])) / len(dataloader.dataset)
-        reweight = None if ban_reweight else torch.tensor(train_props / split_props).cuda()
+        train_props = np.bincount(np.array(
+            dataloaders['train'].dataset.Y_dict['true_subclass'])) / len(
+                dataloaders['train'].dataset)
+        split_props = np.bincount(np.array(dataloader.dataset.Y_dict['true_subclass'])) / len(
+            dataloader.dataset)
+        use_cuda = next(model.parameters()).is_cuda
+        reweight = None if ban_reweight else torch.tensor(train_props / split_props)
+        if use_cuda and reweight is not None: reweight = reweight.cuda()
 
         metrics, outputs = self._run_epoch(model, dataloader, optimize=False,
                                            save_activations=save_activations, reweight=reweight,
-                                           bit_pretrained=bit_pretrained,
-                                           adv_metrics=adv_metrics)
+                                           bit_pretrained=bit_pretrained, adv_metrics=adv_metrics)
         return metrics, outputs
 
-    def _run_epoch(self, model, dataloader, optimize=False, save_activations=False,
-                   reweight=None, bit_pretrained=False, adv_metrics=False):
+    def _run_epoch(self, model, dataloader, optimize=False, save_activations=False, reweight=None,
+                   bit_pretrained=False, adv_metrics=False):
         """Runs the model on a given dataloader.
         
         Note:
@@ -317,8 +330,10 @@ class GEORGEClassification:
                         if progress:
                             bar.suffix = PROGRESS_BAR_SUFFIX.format(
                                 batch=batch_idx + 1, size=len(dataloader),
-                                total=format_timedelta(bar.elapsed_td), eta=format_timedelta(bar.eta_td),
-                                **{k: 0 for k in prog_metric_names})
+                                total=format_timedelta(bar.elapsed_td),
+                                eta=format_timedelta(bar.eta_td),
+                                **{k: 0
+                                   for k in prog_metric_names})
                             bar.next()
                         continue
                     co = self.criterion(logits, loss_targets, targets['subclass'])
@@ -332,8 +347,7 @@ class GEORGEClassification:
             metrics = self._compute_progress_metrics(losses, corrects, type_to_labels,
                                                      type_to_num_classes, per_class_meters,
                                                      reweight=reweight_vec)
-            acc, preds = compute_accuracy(logits.data, loss_targets.data,
-                                          return_preds=True)
+            acc, preds = compute_accuracy(logits.data, loss_targets.data, return_preds=True)
 
             outputs['probs'].append(F.softmax(logits, dim=1).detach().cpu()[:, 1])
             outputs['preds'].append(preds)
@@ -342,8 +356,8 @@ class GEORGEClassification:
             if reweight_vec is not None:
                 outputs['reweight'].append(reweight_vec.cpu())
 
-            self._update_metrics(metric_meters, acc, loss, losses, corrects,
-                                 batch_size, reweight_vec)
+            self._update_metrics(metric_meters, acc, loss, losses, corrects, batch_size,
+                                 reweight_vec)
 
             PROGRESS_BAR_STR = PROGRESS_BAR_SUFFIX
 
@@ -366,8 +380,10 @@ class GEORGEClassification:
                         paired_aurocs = []
                         for neg_subclass in neg_subclasses:
                             for pos_subclass in pos_subclasses:
-                                inds = ((subclass_labels == neg_subclass) | (subclass_labels == pos_subclass)).cpu()
-                                subset_pair_auroc = compute_roc_auc(targets_cat[inds], probs_cat[inds])
+                                inds = ((subclass_labels == neg_subclass) |
+                                        (subclass_labels == pos_subclass)).cpu()
+                                subset_pair_auroc = compute_roc_auc(targets_cat[inds],
+                                                                    probs_cat[inds])
                                 paired_aurocs.append(subset_pair_auroc)
                         rob_auroc = min(paired_aurocs)
                     metrics[f'{key}_rob_auroc'] = rob_auroc
@@ -402,11 +418,16 @@ class GEORGEClassification:
         self._print_output_metrics(outputs)
 
         if adv_metrics:
-            scaa = np.mean([ga.avg * 100 for ga in np.array(per_class_meters[f'per_true_subclass_accs'])])
-            self.logger.info(f'All accs: {[ga.avg * 100 for ga in np.array(per_class_meters[f"per_true_subclass_accs"])]}')
+            scaa = np.mean(
+                [ga.avg * 100 for ga in np.array(per_class_meters[f'per_true_subclass_accs'])])
+            self.logger.info(
+                f'All accs: {[ga.avg * 100 for ga in np.array(per_class_meters[f"per_true_subclass_accs"])]}'
+            )
             self.logger.info(f'SCAA: {scaa:.3f}')
-            ap = sklearn.metrics.average_precision_score(outputs['targets'], outputs['probs'], sample_weight=outputs['reweight'] if reweight_vec is not None else None)
-            self.logger.info(f'MaP: {ap:.3f}')
+            ap = sklearn.metrics.average_precision_score(
+                outputs['targets'], outputs['probs'],
+                sample_weight=outputs['reweight'] if reweight_vec is not None else None)
+            self.logger.info(f'MaP: {ap:.4f}')
 
         return outputs['metrics'], outputs
 
@@ -414,10 +435,12 @@ class GEORGEClassification:
         """Helper function to update metric meters given network outputs."""
         metric_meters['loss'].update(loss, batch_size)
         metric_meters['acc'].update(acc[0], batch_size)
-        adj_losses, adj_counts = self.criterion.compute_group_avg(
-                losses, torch.zeros_like(corrects), num_groups=1, reweight=reweight_vec)
-        adj_accs, _ = self.criterion.compute_group_avg(
-                corrects, torch.zeros_like(corrects), num_groups=1, reweight=reweight_vec)
+        adj_losses, adj_counts = self.criterion.compute_group_avg(losses,
+                                                                  torch.zeros_like(corrects),
+                                                                  num_groups=1,
+                                                                  reweight=reweight_vec)
+        adj_accs, _ = self.criterion.compute_group_avg(corrects, torch.zeros_like(corrects),
+                                                       num_groups=1, reweight=reweight_vec)
         adj_loss = adj_losses[0].item()
         adj_acc = adj_accs[0].item() * 100
         adj_count = adj_counts[0].item()
@@ -426,20 +449,30 @@ class GEORGEClassification:
 
     def _print_output_metrics(self, outputs):
         self.logger.info(outputs['metrics'])
-        output_strs = [f'Loss: {outputs["metrics"]["loss"]:.3f}, '
-                       f'Acc.: {outputs["metrics"]["acc"]:.2f}%, '
-                       f'Rw. loss: {outputs["metrics"]["loss_rw"]:.3f}, '
-                       f'Rw. acc: {outputs["metrics"]["acc_rw"]:.2f}%, ',
-                       f'True rob. loss: {outputs["metrics"]["true_subclass_rob_loss"]:.3f}, '
-                       f'True rob. acc: {outputs["metrics"]["true_subclass_rob_acc"]:.2f}%']
+        output_strs = [
+            f'Loss: {outputs["metrics"]["loss"]:.3f}, '
+            f'Acc.: {outputs["metrics"]["acc"]:.2f}%, '
+        ]
+        if self.logger.type == 'full':
+            output_strs += [
+                f'Rw. loss: {outputs["metrics"]["loss_rw"]:.3f}, '
+                f'Rw. acc: {outputs["metrics"]["acc_rw"]:.2f}%, ',
+            ]
+        output_strs += [
+            f'True rob. loss: {outputs["metrics"]["true_subclass_rob_loss"]:.3f}, '
+            f'True rob. acc: {outputs["metrics"]["true_subclass_rob_acc"]:.2f}%'
+        ]
         if self.has_estimated_subclasses:
             # "Robust accuracy" is accuracy on the estimated subclasses. If there are none (i.e., we either have
             # no estimate of the subclass labels, or we know the true subclasses), then it is inapplicable.
-            output_strs.insert(1,
-                f'Est. rob. loss: {outputs["metrics"]["subclass_rob_loss"]:.3f}, '
-                f'Est. rob. acc: {outputs["metrics"]["subclass_rob_acc"]:.2f}%, '
-                f'Rw. rob. loss: {outputs["metrics"]["subclass_rob_loss_rw"]:.3f}, '
-                f'Rw. rob. acc: {outputs["metrics"]["subclass_rob_acc_rw"]:.2f}%, ')
+            est_metrics_str = \
+                (f'Est. rob. loss: {outputs["metrics"]["subclass_rob_loss"]:.3f}, '
+                 f'Est. rob. acc: {outputs["metrics"]["subclass_rob_acc"]:.2f}%, ')
+            if self.logger.type == 'full':
+                est_metrics_str += \
+                    (f'Rw. rob. loss: {outputs["metrics"]["subclass_rob_loss_rw"]:.3f}, '
+                     f'Rw. rob. acc: {outputs["metrics"]["subclass_rob_acc_rw"]:.2f}%, ')
+            output_strs.insert(1, est_metrics_str)
         self.logger.basic_info(''.join(output_strs))
 
     def _check_dataset(self, dataset):
@@ -470,7 +503,7 @@ class GEORGEClassification:
             
         Returns:
             per_class_meters(Dict[str, List[AverageMeter]]): A dictionary of
-                per_class_meters, where a per_class_meter is a list of AverageMeter 
+                per_class_meters, where each per_class_meter is a list of AverageMeter
                 objects, one for each class. There is a per_class_meter for each 
                 label_type, and for each metric_type (e.g. losses, accs). The 
                 AverageMeter objects are used to track metrics on individual groups.
@@ -516,12 +549,18 @@ class GEORGEClassification:
                                                               num_groups=num_classes)
             accs, _ = self.criterion.compute_group_avg(corrects, labels, num_groups=num_classes)
             losses_rw, counts_rw = self.criterion.compute_group_avg(sample_losses, labels,
-                                       num_groups=num_classes, reweight=reweight)
-            accs_rw, _ = self.criterion.compute_group_avg(corrects, labels,
-                             num_groups=num_classes, reweight=reweight)
-            batch_stats[label_type] = {'losses': losses, 'losses_rw': losses_rw,
-                                       'counts': counts, 'counts_rw': counts_rw,
-                                       'accs': accs, 'accs_rw': accs_rw}
+                                                                    num_groups=num_classes,
+                                                                    reweight=reweight)
+            accs_rw, _ = self.criterion.compute_group_avg(corrects, labels, num_groups=num_classes,
+                                                          reweight=reweight)
+            batch_stats[label_type] = {
+                'losses': losses,
+                'losses_rw': losses_rw,
+                'counts': counts,
+                'counts_rw': counts_rw,
+                'accs': accs,
+                'accs_rw': accs_rw
+            }
         metrics = {}
         for label_type, stats in batch_stats.items():
             losses, counts, accs, losses_rw, counts_rw, accs_rw = \
@@ -599,11 +638,15 @@ class GEORGEClassification:
             self._save(data, f'best_model.pt')
 
         if self.compute_auroc:
-            save_metrics = ['val_auroc', 'val_subclass_rob_auroc', 'val_true_subclass_rob_auroc',
-                            'val_alt_subclass_rob_auroc']
+            save_metrics = [
+                'val_auroc', 'val_subclass_rob_auroc', 'val_true_subclass_rob_auroc',
+                'val_alt_subclass_rob_auroc'
+            ]
         else:
-            save_metrics = ['val_acc', 'val_acc_rw', 'val_subclass_rob_acc',
-                            'val_subclass_rob_acc_rw', 'val_true_subclass_rob_acc']
+            save_metrics = [
+                'val_acc', 'val_acc_rw', 'val_subclass_rob_acc', 'val_subclass_rob_acc_rw',
+                'val_true_subclass_rob_acc'
+            ]
 
         for metric in save_metrics:
             if metrics[metric] > self.state['best_' + metric]:

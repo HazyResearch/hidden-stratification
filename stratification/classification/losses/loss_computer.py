@@ -13,7 +13,6 @@ class LossComputer:
         self.n_groups = n_groups
         if auroc_version:
             assert (class_map is not None)
-            size_adjustments = None  # size adjustment not applicable to modified loss
             self.n_gdro_groups = len(class_map[0]) * len(class_map[1])
             self.class_map = class_map
         else:
@@ -28,9 +27,13 @@ class LossComputer:
             self.group_counts = group_counts.to(self.group_range.device)
 
             if size_adjustments is not None:
-                self.adj = torch.tensor(size_adjustments).float().to(self.group_range.device)
                 self.do_adj = True
-                self.loss_adjustment = self.adj / torch.sqrt(self.group_counts)
+                if auroc_version:
+                    self.adj = torch.tensor(size_adjustments[0]).float().to(self.group_range.device)
+                    self.loss_adjustment = self.adj / torch.sqrt(self.group_counts[:-1])
+                else:
+                    self.adj = torch.tensor(size_adjustments).float().to(self.group_range.device)
+                    self.loss_adjustment = self.adj / torch.sqrt(self.group_counts)
             else:
                 self.adj = torch.zeros(self.n_gdro_groups).float().to(self.group_range.device)
                 self.do_adj = False
@@ -41,8 +44,7 @@ class LossComputer:
             # The following quantities are maintained/updated throughout training
             if self.stable:
                 logging.info('Using numerically stabilized DRO algorithm')
-                self.adv_probs_logits = torch.zeros(self.n_gdro_groups).to(
-                    self.group_range.device)
+                self.adv_probs_logits = torch.zeros(self.n_gdro_groups).to(self.group_range.device)
             else:  # for debugging purposes
                 logging.warn('Using original DRO algorithm')
                 self.adv_probs = torch.ones(self.n_gdro_groups).to(
@@ -116,7 +118,8 @@ class LossComputer:
                 group_losses = reweighted[inds]
                 group_denom = torch.sum(reweight[inds])
                 group_denom = group_denom
-                group_loss.append(torch.sum(group_losses) / (group_denom + (group_denom == 0).float()))
+                group_loss.append(
+                    torch.sum(group_losses) / (group_denom + (group_denom == 0).float()))
                 group_count.append(group_denom)
             group_loss, group_count = torch.tensor(group_loss), torch.tensor(group_count)
         else:

@@ -1,8 +1,10 @@
 {
     "exp_dir": "checkpoints/tutorial",
-    "seed": 2,
+    "dataset": "mnist",
+    "mode": "george",
+    "seed": 0,
     "classification_config": {
-        "bit_pretrained": true,
+        "model": "shallow_cnn",
         "checkpoint_metric": "val_acc",
         "optimizer_config": {
             "class_args": {
@@ -34,9 +36,17 @@
                 "class_args": {}
             },
             "criterion_config": {}
+        },
+        "dataset_config": {
+            "subsample_8": false,
+            "resize": false
         }
     },
+    "reduction_config": {
+        "model": "umap"
+    },
     "cluster_config": {
+        "model": "gmm",
         "metric_types": [
             "composition"
         ]

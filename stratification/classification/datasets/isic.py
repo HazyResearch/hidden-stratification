@@ -69,8 +69,8 @@ class ISICDataset(GEORGEDataset):
             sup_label, sub_label = self._get_labels_from_id(idx, ontology=self.ontology)
             superclass_labels.append(sup_label)
             true_subclass_labels.append(sub_label)
-            _, alt_sub_label = self._get_labels_from_id(idx,
-                ontology=({'patch', 'histopathology'} - {self.ontology}).pop())
+            _, alt_sub_label = self._get_labels_from_id(
+                idx, ontology=({'patch', 'histopathology'} - {self.ontology}).pop())
             alt_subclass_labels.append(alt_sub_label)
 
         X = self.df.index.values

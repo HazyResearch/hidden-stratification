@@ -39,13 +39,13 @@ class MNISTDataset(GEORGEDataset):
     _normalization_stats = {'mean': (0.1307, ), 'std': (0.3081, )}
     _pil_mode = "L"
 
-    def __init__(self, root, split, transform=None, download=False, subclass_proportions=None,
+    def __init__(self, root, split, transform=None, resize=True, download=False, subsample_8=False,
                  ontology='five-comp', augment=False):
         assert (transform is None)
-        assert (subclass_proportions is None)
-        transform = get_transform_MNIST(augment=augment)
-        self.subclass_proportions = {8: 0.05} if 'train' in split else {}
-        super().__init__('MNIST', root, split, transform=transform, download=download, ontology=ontology)
+        transform = get_transform_MNIST(resize=resize, augment=augment)
+        self.subclass_proportions = {8: 0.05} if ('train' in split and subsample_8) else {}
+        super().__init__('MNIST', root, split, transform=transform, download=download,
+                         ontology=ontology)
 
     def _load_samples(self):
         """Loads the U-MNIST dataset from the data file created by self._download"""
@@ -59,7 +59,8 @@ class MNISTDataset(GEORGEDataset):
         # subsample some subset of subclasses
         if self.subclass_proportions:
             logging.info(f'Subsampling subclasses: {self.subclass_proportions}')
-            data, original_labels = self.subsample_digits(data, original_labels, self.subclass_proportions)
+            data, original_labels = self.subsample_digits(data, original_labels,
+                                                          self.subclass_proportions)
             logging.info('New label counts:')
             logging.info(np.bincount(original_labels))
 
@@ -102,8 +103,7 @@ class MNISTDataset(GEORGEDataset):
             logging.info(f'Subsampling {label} fine class, keeping {freq*100} percent...')
             inds = [i for i, x in enumerate(labels) if x == label]
             inds = set(random.sample(inds, int((1 - freq) * len(inds))))
-            labels = torch.tensor(
-                        [lab for i, lab in enumerate(labels) if i not in inds])
+            labels = torch.tensor([lab for i, lab in enumerate(labels) if i not in inds])
             data = torch.stack([datum for i, datum in enumerate(data) if i not in inds])
 
         random.setstate(prev_state)
@@ -260,12 +260,18 @@ def open_maybe_compressed_file(path):
     return open(path, 'rb')
 
 
-def get_transform_MNIST(augment=False):
-    test_transform_list = [transforms.Resize((32, 32)), transforms.ToTensor(),
-                           transforms.Normalize(**MNISTDataset._normalization_stats)]
+def get_transform_MNIST(resize=True, augment=False):
+    test_transform_list = [
+        transforms.ToTensor(),
+        transforms.Normalize(**MNISTDataset._normalization_stats)
+    ]
+    if resize:
+        test_transform_list.insert(0, transforms.Resize((32, 32)))
     if not augment:
         return transforms.Compose(test_transform_list)
 
-    train_transform_list = [transforms.RandomCrop(MNISTDataset._resolution, padding=4),
-                            transforms.RandomHorizontalFlip()] + test_transform_list
+    train_transform_list = [
+        transforms.RandomCrop(MNISTDataset._resolution, padding=4),
+        transforms.RandomHorizontalFlip()
+    ] + test_transform_list
     return transforms.Compose(train_transform_list)

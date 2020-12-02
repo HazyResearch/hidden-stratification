@@ -4,6 +4,7 @@ ipykernel
 ipywidgets
 joblib
 jsonargparse
+jsonschema
 jupyterlab
 matplotlib
 numba>=0.50
@@ -11,7 +12,7 @@ numpy
 opencv-python-headless
 pandas
 progress
-scikit-learn
+scikit-learn>=0.22.2.post1
 seaborn
 torchvision
 umap-learn>=0.4.5

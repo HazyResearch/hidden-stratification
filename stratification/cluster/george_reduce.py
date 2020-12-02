@@ -82,12 +82,16 @@ class GEORGEReducer:
         if 'losses' not in inputs_tr or len(inputs_tr['losses']) == 0:
             inputs_val = inputs['val']
             inputs_test = inputs['test']
-            inputs_tr['losses'] = np.zeros(len(inputs_tr['activations']), dtype=inputs_tr['activations'].dtype)
-            inputs_val['losses'] = np.zeros(len(inputs_val['activations']), dtype=inputs_val['activations'].dtype)
-            inputs_test['losses'] = np.zeros(len(inputs_test['activations']), dtype=inputs_test['activations'].dtype)
+            inputs_tr['losses'] = np.zeros(len(inputs_tr['activations']),
+                                           dtype=inputs_tr['activations'].dtype)
+            inputs_val['losses'] = np.zeros(len(inputs_val['activations']),
+                                            dtype=inputs_val['activations'].dtype)
+            inputs_test['losses'] = np.zeros(len(inputs_test['activations']),
+                                             dtype=inputs_test['activations'].dtype)
 
         if self.config['mean_reduce']:
-            train_means = inputs_tr['activations'].reshape(inputs_tr['activations'].shape[0], -1).mean(axis=0, keepdims=True)
+            train_means = inputs_tr['activations'].reshape(inputs_tr['activations'].shape[0],
+                                                           -1).mean(axis=0, keepdims=True)
         else:
             train_means = None
 

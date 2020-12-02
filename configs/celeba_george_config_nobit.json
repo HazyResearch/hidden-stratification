@@ -1,15 +1,16 @@
 {
-    "exp_dir": "checkpoints/waterbirds",
-    "dataset": "waterbirds",
+    "exp_dir": "checkpoints/celebA",
+    "dataset": "celeba",
     "mode": "george",
     "seed": 0,
+    "allow_multigpu": true,
     "classification_config": {
         "model": "resnet50",
-        "checkpoint_metric": "val_acc_rw",
+        "checkpoint_metric": "val_acc",
         "optimizer_config": {
             "class_args": {
                 "lr": 1e-5,
-                "weight_decay": 1.0,
+                "weight_decay": 0.1,
                 "momentum": 0.9
             },
             "class_name": "SGD"
@@ -17,11 +18,12 @@
         "workers": 8,
         "criterion_config": {},
         "eval_only": false,
+        "save_act_only": false,
         "metric_types": [
             "loss",
             "acc"
         ],
-        "num_epochs": 300,
+        "num_epochs": 50,
         "batch_size": 128,
         "scheduler_config": {
             "class_args": {
@@ -30,12 +32,12 @@
             "class_name": "MultiStepLR"
         },
         "gdro_config": {
-            "checkpoint_metric": "val_subclass_rob_acc_rw",
+            "checkpoint_metric": "val_subclass_rob_acc",
             "optimizer_config": {
                 "class_args": {}
             },
             "criterion_config": {
-                "size_adjustment": 2
+                "size_adjustment": 3
             },
             "uniform_group_sampling": true
         },
@@ -52,6 +54,7 @@
             "mean_loss",
             "composition"
         ],
-        "search_k": true
+        "search_k": true,
+        "sil_cuda": true
     }
 }

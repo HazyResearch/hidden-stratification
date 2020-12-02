@@ -57,7 +57,8 @@ class GEORGEDataset(Dataset):
             self.true_subclass_available = False
         assert (self.true_subclass_available)
 
-        sup_to_true_sub_map = build_sup_to_sub_map(self.Y_dict['superclass'], self.Y_dict['true_subclass'])
+        sup_to_true_sub_map = build_sup_to_sub_map(self.Y_dict['superclass'],
+                                                   self.Y_dict['true_subclass'])
         self._class_maps = {'true_subclass': sup_to_true_sub_map}
         self._subclass_labels_added = False
 

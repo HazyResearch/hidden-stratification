@@ -32,7 +32,7 @@ class EpochCSVLogger:
 
 class SimpleLogger:
     def __init__(self):
-        pass
+        self.type = 'simple'
 
     def basic_info(self, message):
         print(message)
@@ -47,6 +47,7 @@ class SimpleLogger:
 class FullLogger:
     '''Wrapper class for Python logger'''
     def __init__(self, logger):
+        self.type = 'full'
         self.logger = logger
 
     def basic_info(self, message):

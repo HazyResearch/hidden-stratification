@@ -38,9 +38,11 @@
                 }
             },
             "criterion_config": {
+                "size_adjustment": 0,
                 "auroc_gdro": true
             }
-        }
+        },
+        "dataset_config": {}
     },
     "reduction_config": {
         "model": "umap"
