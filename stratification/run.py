@@ -1,8 +1,8 @@
 import os
 from pathlib import Path
 
-from hydra.core.config_store import ConfigStore
 from hydra import compose, initialize
+from hydra.core.config_store import ConfigStore
 import torch
 import wandb
 
@@ -37,11 +37,11 @@ def main() -> None:
     cluster_model_name = config["cluster_config"]["model"]
     wandb.init(
         entity="predictive-analytics-lab",
-        project="hidden-stratification",
+        project="suds",
         dir=str(local_dir),
         config=config,
         reinit=True,
-        group=config.get("group", f"{config['dataset']}/{cluster_model_name}"),
+        group=config.get("group", f"{config['dataset']}/GEORGE/{cluster_model_name}"),
     )
 
     torch.multiprocessing.set_sharing_strategy('file_system')
@@ -68,10 +68,13 @@ def main() -> None:
         assert activ_done
         if config['cluster_dir'] != 'NONE':
             dataloaders = harness.get_dataloaders(
-                config=config, data_config=biased_data_config, mode=first_mode, use_cuda=use_cuda,
+                config=config,
+                data_config=biased_data_config,
+                mode=first_mode,
+                use_cuda=use_cuda,
                 subclass_labels=os.path.join(config['cluster_dir'], 'clusters.pt')
-                        if os.path.isdir(config['cluster_dir'])
-                        else config['cluster_dir'],
+                if os.path.isdir(config['cluster_dir'])
+                else config['cluster_dir'],
             )
 
     # Train a model with ERM
