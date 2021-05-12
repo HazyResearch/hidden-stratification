@@ -416,7 +416,7 @@ class GEORGEClassification:
             )
             acc, preds = compute_accuracy(logits.data, loss_targets.data, return_preds=True)
 
-            probs = logits.softmax(dim=1)[:, 1] if logits.ndim > 1 else logits.sigmoid()
+            probs = logits.softmax(dim=1)[:, 1] if logits.size(1) > 1 else logits.sigmoid().squeeze()
             outputs['probs'].append(probs.detach().cpu())
             outputs['preds'].append(preds)
             outputs['losses'].append(losses.detach().cpu())
