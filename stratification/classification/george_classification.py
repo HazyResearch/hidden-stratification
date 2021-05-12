@@ -10,7 +10,7 @@ import torch.nn.functional as F
 import torch.optim as optimizers
 import torch.optim.lr_scheduler as schedulers
 
-from stratification.classification.datasets import LABEL_TYPES, GEORGEDataset
+from stratification.classification.datasets import GEORGEDataset, LABEL_TYPES
 from stratification.classification.losses import init_criterion
 from stratification.classification.utils import (
     AverageMeter,
@@ -416,7 +416,8 @@ class GEORGEClassification:
             )
             acc, preds = compute_accuracy(logits.data, loss_targets.data, return_preds=True)
 
-            outputs['probs'].append(F.softmax(logits, dim=1).detach().cpu()[:, 1])
+            probs = logits.softmax(dim=1) if logits.ndim > 1 else logits.sigmoid()
+            outputs['probs'].append(probs.detach().cpu()[:, 1])
             outputs['preds'].append(preds)
             outputs['losses'].append(losses.detach().cpu())
             outputs['targets'].append(loss_targets.detach().cpu())
