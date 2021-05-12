@@ -128,6 +128,8 @@ class BaseConfig:
     bias: BiasConfig = MISSING
     lr: float = 1e-3
     epochs: int = 40
+    batch_size: int = 256
+    test_batch_size: int = 1000
 
     @classmethod
     def from_hydra(cls: Type[T], hydra_config: DictConfig) -> T:
@@ -135,9 +137,7 @@ class BaseConfig:
 
         This is necessary because dataclasses cannot be instantiated recursively yet.
         """
-        subconfigs = {
-            k: instantiate(v) for k, v in hydra_config.items() if k not in ("_target_", "cmd")
-        }
+        subconfigs = {k: instantiate(hydra_config[k]) for k in ["data", "bias"]}
 
         return cls(**subconfigs)
 

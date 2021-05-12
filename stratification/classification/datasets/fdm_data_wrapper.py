@@ -37,7 +37,7 @@ class FdmDatasetWrapper(GEORGEDataset):
             # 1. step: train classifier on triplet.train
             # 2. step: predict labels on triplet.context
             # 3. step: combine datasets
-            dataset = train_and_predict(self.cfg, self.triplet, device=device)
+            dataset = train_and_predict(self.cfg, self.triplet, device=self.device)
         else:
             dataset = self.triplet.test
         # 4. step: extract labels
@@ -61,12 +61,12 @@ def train_and_predict(cfg: BaseConfig, dataset_triplet: DatasetTriplet, device: 
 
     train_loader = DataLoader(
         train_data,
-        batch_size=cfg.fdm.eval_batch_size,
+        batch_size=cfg.batch_size,
         pin_memory=True,
         **train_loader_kwargs,
     )
     test_loader = DataLoader(
-        test_data, batch_size=cfg.fdm.test_batch_size, shuffle=False, pin_memory=True
+        test_data, batch_size=cfg.test_batch_size, shuffle=False, pin_memory=True
     )
 
     clf: Classifier = fit_classifier(

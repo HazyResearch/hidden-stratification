@@ -1,10 +1,8 @@
-from dataclasses import dataclass
 import os
 from pathlib import Path
 
-import hydra
 from hydra.core.config_store import ConfigStore
-from hydra.experimental import compose, initialize
+from hydra import compose, initialize
 import torch
 import wandb
 
@@ -24,6 +22,7 @@ def main() -> None:
             config_name="biased_data",
             overrides=[f"data={config['data_config']}", f"bias={config['bias_config']}"],
         )
+        print(cfg)
         biased_data_config = BaseConfig.from_hydra(cfg)
 
     use_cuda = config['use_cuda'] and torch.cuda.is_available()
