@@ -1,16 +1,18 @@
 from collections import defaultdict
 from copy import deepcopy
 import json
-import logging
 import os
-import time
+from typing import Any, Dict, Optional
 
 import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
 
+from shared.configs import BaseConfig
+from shared.data.data_loading import load_dataset
 from stratification.classification.datasets import *
+from stratification.classification.datasets.fdm_data_wrapper import FdmDatasetWrapper
 from stratification.classification.george_classification import GEORGEClassification
 from stratification.classification.models import *
 from stratification.cluster.george_cluster import GEORGECluster
@@ -317,12 +319,23 @@ class GEORGEHarness:
             + '"erm"]'
         )
 
-    def get_dataloaders(self, config, mode='erm', transforms=None, subclass_labels=None):
-        dataset_name = config['dataset']
+    def get_dataloaders(
+        self, config: Dict[str, Any], data_config: BaseConfig, use_cuda: bool, mode="erm", subclass_labels: Optional[str] = None
+    ):
+        train_config = config["classification_config"]
+        device = torch.device(f"cuda:{torch.cuda.current_device()}") if use_cuda else torch.device("cpu")
+        if mode == "erm":
+            mode_config = train_config["erm_config"]
+        else:
+            mode_config = train_config["gdro_config"]
+        train_config = merge_dicts(train_config, mode_config)
+
+        # dataset_name = config['dataset']
         seed = config['seed']
         config = config['classification_config']
         if mode == 'george':
-            assert '.pt' in subclass_labels  # file path to subclass labels specified
+            # file path to subclass labels specified
+            assert isinstance(subclass_labels, str) and '.pt' in subclass_labels
         elif mode != 'erm':
             assert subclass_labels is None
             subclass_labels = mode.rstrip('_gdro')
@@ -343,14 +356,15 @@ class GEORGEHarness:
             mode_config = config[f'gdro_config']
         config = merge_dicts(config, mode_config)
 
-        dataset_name = dataset_name.lower()
-        d = {
-            'celeba': CelebADataset,
-            'isic': ISICDataset,
-            'mnist': MNISTDataset,
-            'waterbirds': WaterbirdsDataset,
-        }
-        dataset_class = d[dataset_name]
+        # dataset_name = dataset_name.lower()
+        # d = {
+        #     'celeba': CelebADataset,
+        #     'isic': ISICDataset,
+        #     'mnist': MNISTDataset,
+        #     'waterbirds': WaterbirdsDataset,
+        # }
+        dataset_triplet = load_dataset(cfg=data_config)
+        dataset_class = FdmDatasetWrapper
         batch_size = config['batch_size']
 
         dataloaders = {}
@@ -360,11 +374,10 @@ class GEORGEHarness:
             shared_dl_args = {'batch_size': batch_size, 'num_workers': config['workers']}
             if split == 'train':
                 dataset = dataset_class(
-                    root='./data',
+                    cfg=data_config,
                     split=split,
-                    download=True,
-                    augment=True,
-                    **config['dataset_config'],
+                    dataset_triplet=dataset_triplet,
+                    device=device,
                 )
                 dataset.add_subclass_labels(split_subclass_labels, seed=seed)
                 if config.get('uniform_group_sampling', False):
@@ -379,7 +392,12 @@ class GEORGEHarness:
                     dataloaders[split] = DataLoader(dataset, **shared_dl_args, shuffle=True)
             else:
                 # Evaluation dataloaders (including for the training set) are "clean" - no data augmentation or shuffling
-                dataset = dataset_class(root='./data', split=key, **config['dataset_config'])
+                dataset = dataset_class(
+                    cfg=data_config,
+                    dataset_triplet=dataset_triplet,
+                    split=key,
+                    device=device,
+                )
                 dataset.add_subclass_labels(split_subclass_labels, seed=seed)
                 dataloaders[split] = DataLoader(dataset, **shared_dl_args, shuffle=False)
 

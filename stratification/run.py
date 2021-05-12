@@ -1,24 +1,58 @@
+from dataclasses import dataclass
 import os
+from pathlib import Path
 
+import hydra
+from hydra.core.config_store import ConfigStore
+from hydra.experimental import compose, initialize
 import torch
+import wandb
 
+from shared.configs import BaseConfig, register_configs
 from stratification.harness import GEORGEHarness
 from stratification.utils.parse_args import get_config
 from stratification.utils.utils import init_cuda, set_seed
 
+cs = ConfigStore.instance()
+register_configs()
 
-def main():
+
+def main() -> None:
     config = get_config()
+    with initialize(config_path="../configs"):
+        cfg = compose(
+            config_name="biased_data",
+            overrides=[f"data={config['data_config']}", f"bias={config['bias_config']}"],
+        )
+        biased_data_config = BaseConfig.from_hydra(cfg)
+
     use_cuda = config['use_cuda'] and torch.cuda.is_available()
     set_seed(config['seed'], use_cuda)  # set seeds for reproducibility
     init_cuda(config['deterministic'], config['allow_multigpu'])
+
+    # Initialize wandb with online-logging as the default
+    local_dir = Path(".", "local_logging")
+    local_dir.mkdir(exist_ok=True)
+    if config.get("log_offline", False):
+        os.environ["WANDB_MODE"] = "dryrun"
+    cluster_model_name = config["cluster_config"]["model"]
+    wandb.init(
+        entity="predictive-analytics-lab",
+        project="hidden-stratification",
+        dir=str(local_dir),
+        config=config,
+        reinit=True,
+        group=config.get("group", f"{config['dataset']}/{cluster_model_name}"),
+    )
 
     torch.multiprocessing.set_sharing_strategy('file_system')
     harness = GEORGEHarness(config, use_cuda=use_cuda)
     harness.save_full_config(config)
 
     first_mode = 'erm' if (config['mode'] == 'george') else config['mode']
-    dataloaders = harness.get_dataloaders(config, mode=first_mode)
+    dataloaders = harness.get_dataloaders(
+        config=config, data_config=biased_data_config, mode=first_mode, use_cuda=use_cuda
+    )
     num_classes = dataloaders['train'].dataset.get_num_classes('superclass')
     model = harness.get_nn_model(config, num_classes=num_classes, mode=first_mode)
 
@@ -35,11 +69,10 @@ def main():
         assert activ_done
         if config['cluster_dir'] != 'NONE':
             dataloaders = harness.get_dataloaders(
-                config,
-                mode=first_mode,
+                config=config, data_config=biased_data_config, mode=first_mode, use_cuda=use_cuda,
                 subclass_labels=os.path.join(config['cluster_dir'], 'clusters.pt')
-                if os.path.isdir(config['cluster_dir'])
-                else config['cluster_dir'],
+                        if os.path.isdir(config['cluster_dir'])
+                        else config['cluster_dir'],
             )
 
     # Train a model with ERM
@@ -98,7 +131,11 @@ def main():
 
         set_seed(config['seed'], use_cuda)  # reset random state
         dataloaders = harness.get_dataloaders(
-            config, mode='george', subclass_labels=os.path.join(cluster_dir, 'clusters.pt')
+            config,
+            mode='george',
+            data_config=biased_data_config,
+            subclass_labels=os.path.join(cluster_dir, 'clusters.pt'),
+            use_cuda=use_cuda,
         )
         model = harness.get_nn_model(config, num_classes=num_classes, mode='george')
 
