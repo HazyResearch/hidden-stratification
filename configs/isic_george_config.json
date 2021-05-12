@@ -21,8 +21,7 @@
             "loss",
             "acc"
         ],
-        "num_epochs": 20,
-        "batch_size": 16,
+        "num_epochs": 20,batch_size": 16,
         "scheduler_config": {
             "class_args": {
                 "milestones": [15]

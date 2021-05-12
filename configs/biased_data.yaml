@@ -1,0 +1,4 @@
+defaults:
+  - config_schema
+  - data: cmnist/2dig
+  - bias: cmnist/no_bias

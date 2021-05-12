@@ -1,0 +1,12 @@
+log_dataset: mildly_subs
+missing_s: []
+subsample_context:
+    "0": 1.0
+    "1": 1.0
+    "2": 1.0
+    "3": 1.0
+subsample_train:
+    "0": 1.0
+    "1": 1.0
+    "2": 1.0
+    "3": 0.0

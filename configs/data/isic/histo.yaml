@@ -1,0 +1,10 @@
+defaults:
+    - /data/schema: isic
+
+context_pcnt: 0.5
+data_pcnt: 1.0
+input_noise: false
+quant_level: eight
+test_pcnt: 0.2
+isic_sens_attr: histo
+isic_target_attr: malignant

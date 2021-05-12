@@ -16,4 +16,5 @@ scikit-learn>=0.22.2.post1
 seaborn
 torchvision
 umap-learn>=0.4.5
+wandb
 yapf

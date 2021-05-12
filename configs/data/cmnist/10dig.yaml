@@ -1,0 +1,19 @@
+defaults:
+    - /data/schema: cmnist
+
+background: false
+binarize: true
+black: true
+color_correlation: 1.0
+colors: []
+context_pcnt: 0.4
+data_pcnt: 1.0
+filter_labels: []
+greyscale: false
+input_noise: false
+padding: 2
+quant_level: eight
+rotate_data: false
+scale: 0.0
+shift_data: false
+test_pcnt: 0.2

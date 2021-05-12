@@ -3,6 +3,9 @@
     "dataset": "mnist",
     "mode": "george",
     "seed": 0,
+    "log_offline": false,
+    "bias_config": "cmnist/no_bias",
+    "data_config": "cmnist/odd_even",
     "classification_config": {
         "model": "lenet4",
         "checkpoint_metric": "val_acc_rw",

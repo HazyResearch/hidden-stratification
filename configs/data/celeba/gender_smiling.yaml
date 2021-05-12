@@ -1,0 +1,10 @@
+defaults:
+    - /data/schema: celeba
+
+context_pcnt: 0.5
+data_pcnt: 1.0
+input_noise: false
+quant_level: eight
+test_pcnt: 0.2
+celeba_sens_attr: Male
+celeba_target_attr: Smiling

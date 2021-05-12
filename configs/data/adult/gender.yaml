@@ -1,0 +1,6 @@
+defaults:
+    - /data/schema: adult
+
+drop_native: true
+adult_balanced_test: true
+balance_all_quadrants: true
