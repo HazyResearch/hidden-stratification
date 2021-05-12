@@ -68,11 +68,16 @@ class LossComputer:
 
     def loss(self, yhat, y, group_idx=None, is_training=False):
         # compute per-sample and per-group losses
-        per_sample_losses = self.criterion(yhat.squeeze(1), y)
         batch_size = y.shape[0]
-
+        # BCE expects both the target and the prediction to be a float
+        if yhat.size(1) == 1:
+            y = y.float()
+        per_sample_losses = self.criterion(yhat.squeeze(1), y)
         group_losses, group_counts = self.compute_group_avg(per_sample_losses, group_idx)
-        corrects = (torch.argmax(yhat, 1) == y).float()
+        if yhat.size(1) == 1:
+            corrects = (yhat.squeeze(1).round() == y).float()
+        else:
+            corrects = (torch.argmax(yhat, 1) == y).float()
         group_accs, group_counts = self.compute_group_avg(corrects, group_idx)
 
         # compute overall loss
