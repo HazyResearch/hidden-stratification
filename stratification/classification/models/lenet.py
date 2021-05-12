@@ -11,7 +11,7 @@ class LeNet4(nn.Module):
     def __init__(self, **kwargs):
         super().__init__()
 
-        in_channels = kwargs.get('num_channels', 1)
+        in_channels = kwargs.get('num_channels', 3)
         classes = kwargs.get('num_classes', 10)
         self.convnet = nn.Sequential(
             OrderedDict(
