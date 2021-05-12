@@ -1,6 +1,8 @@
 {
     "exp_dir": "checkpoints/celebA",
     "dataset": "celeba",
+    "bias_config": "celeba/no_smiling_females",
+    "data_config": "celeba/gender_smiling",
     "mode": "george",
     "seed": 0,
     "allow_multigpu": true,
