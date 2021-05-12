@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
+import wandb
 
 from shared.configs import BaseConfig
 from shared.data.data_loading import load_dataset
@@ -203,6 +204,7 @@ class GEORGEHarness:
         if not classification_config['eval_only']:
             self._save_json(os.path.join(save_dir, 'metrics.json'), split_to_metrics)
             self._save_torch(os.path.join(save_dir, 'outputs.pt'), split_to_outputs)
+            wandb.log(split_to_metrics)
         return save_dir
 
     def reduce(self, reduction_config, reduction_model, inputs_path):
@@ -296,6 +298,7 @@ class GEORGEHarness:
 
         # (3) save everything
         self._save_json(os.path.join(save_dir, 'metrics.json'), split_to_metrics)
+        wandb.log(split_to_metrics)
         self._save_torch(os.path.join(save_dir, 'outputs.pt'), split_to_outputs)
         # save assignments only
         split_to_assignments = {k: v['assignments'] for k, v in split_to_outputs.items()}
