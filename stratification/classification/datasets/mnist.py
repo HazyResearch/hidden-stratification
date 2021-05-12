@@ -1,10 +1,10 @@
-import os
-import logging
 import codecs
-import random
 from collections import defaultdict
-from PIL import Image
+import logging
+import os
+import random
 
+from PIL import Image
 import numpy as np
 import pandas as pd
 import torch
@@ -16,36 +16,65 @@ from .base import GEORGEDataset
 
 class MNISTDataset(GEORGEDataset):
     """MNIST Dataset, possibly with undersampling.
-    
+
     NOTE: creates validation set when downloaded for the first time.
     This is a deviation from the traditional MNIST dataset setup.
-    
+
     See <https://pytorch.org/docs/stable/_modules/torchvision/datasets/mnist.html>.
     """
-    resources = [('http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz',
-                  'f68b3c2dcbeaaa9fbdd348bbdeb94873'),
-                 ('http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz',
-                  'd53e105ee54ea40749a09fcbcd1e9432'),
-                 ('http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz',
-                  '9fb629c4189551a2d022fa330f9573f3'),
-                 ('http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz',
-                  'ec29112dd5afa0611ce80d1b7f02629c')]
+
+    resources = [
+        (
+            'http://yann.lecun.com/exdb/mnist/train-images-idx3-ubyte.gz',
+            'f68b3c2dcbeaaa9fbdd348bbdeb94873',
+        ),
+        (
+            'http://yann.lecun.com/exdb/mnist/train-labels-idx1-ubyte.gz',
+            'd53e105ee54ea40749a09fcbcd1e9432',
+        ),
+        (
+            'http://yann.lecun.com/exdb/mnist/t10k-images-idx3-ubyte.gz',
+            '9fb629c4189551a2d022fa330f9573f3',
+        ),
+        (
+            'http://yann.lecun.com/exdb/mnist/t10k-labels-idx1-ubyte.gz',
+            'ec29112dd5afa0611ce80d1b7f02629c',
+        ),
+    ]
     true_subclass_names = [
-        '0 - zero', '1 - one', '2 - two', '3 - three', '4 - four', '5 - five', '6 - six',
-        '7 - seven', '8 - eight', '9 - nine'
+        '0 - zero',
+        '1 - one',
+        '2 - two',
+        '3 - three',
+        '4 - four',
+        '5 - five',
+        '6 - six',
+        '7 - seven',
+        '8 - eight',
+        '9 - nine',
     ]
     _channels = 1
     _resolution = 28
-    _normalization_stats = {'mean': (0.1307, ), 'std': (0.3081, )}
+    _normalization_stats = {'mean': (0.1307,), 'std': (0.3081,)}
     _pil_mode = "L"
 
-    def __init__(self, root, split, transform=None, resize=True, download=False, subsample_8=False,
-                 ontology='five-comp', augment=False):
-        assert (transform is None)
+    def __init__(
+        self,
+        root,
+        split,
+        transform=None,
+        resize=True,
+        download=False,
+        subsample_8=False,
+        ontology='five-comp',
+        augment=False,
+    ):
+        assert transform is None
         transform = get_transform_MNIST(resize=resize, augment=augment)
         self.subclass_proportions = {8: 0.05} if ('train' in split and subsample_8) else {}
-        super().__init__('MNIST', root, split, transform=transform, download=download,
-                         ontology=ontology)
+        super().__init__(
+            'MNIST', root, split, transform=transform, download=download, ontology=ontology
+        )
 
     def _load_samples(self):
         """Loads the U-MNIST dataset from the data file created by self._download"""
@@ -59,8 +88,9 @@ class MNISTDataset(GEORGEDataset):
         # subsample some subset of subclasses
         if self.subclass_proportions:
             logging.info(f'Subsampling subclasses: {self.subclass_proportions}')
-            data, original_labels = self.subsample_digits(data, original_labels,
-                                                          self.subclass_proportions)
+            data, original_labels = self.subsample_digits(
+                data, original_labels, self.subclass_proportions
+            )
             logging.info('New label counts:')
             logging.info(np.bincount(original_labels))
 
@@ -96,7 +126,7 @@ class MNISTDataset(GEORGEDataset):
     def subsample_digits(self, data, labels, subclass_proportions, seed=0):
         prev_state = random.getstate()
         random.seed(seed)
-        data_mod_seed = random.randint(0, 2**32)
+        data_mod_seed = random.randint(0, 2 ** 32)
         random.seed(data_mod_seed)
 
         for label, freq in subclass_proportions.items():
@@ -120,7 +150,8 @@ class MNISTDataset(GEORGEDataset):
     def _check_exists(self):
         return all(
             os.path.exists(os.path.join(self.processed_folder, f'{split}.pt'))
-            for split in ['train', 'val', 'test'])
+            for split in ['train', 'val', 'test']
+        )
 
     def _download(self):
         if self._check_exists():
@@ -132,15 +163,20 @@ class MNISTDataset(GEORGEDataset):
         # download files
         for url, md5 in self.resources:
             filename = url.rpartition('/')[2]
-            download_and_extract_archive(url, download_root=self.raw_folder, filename=filename,
-                                         md5=md5)
+            download_and_extract_archive(
+                url, download_root=self.raw_folder, filename=filename, md5=md5
+            )
 
         # process and save as torch files
         logging.info('Processing...')
-        training_set = (read_image_file(os.path.join(self.raw_folder, 'train-images-idx3-ubyte')),
-                        read_label_file(os.path.join(self.raw_folder, 'train-labels-idx1-ubyte')))
-        test_set = (read_image_file(os.path.join(self.raw_folder, 't10k-images-idx3-ubyte')),
-                    read_label_file(os.path.join(self.raw_folder, 't10k-labels-idx1-ubyte')))
+        training_set = (
+            read_image_file(os.path.join(self.raw_folder, 'train-images-idx3-ubyte')),
+            read_label_file(os.path.join(self.raw_folder, 'train-labels-idx1-ubyte')),
+        )
+        test_set = (
+            read_image_file(os.path.join(self.raw_folder, 't10k-images-idx3-ubyte')),
+            read_label_file(os.path.join(self.raw_folder, 't10k-labels-idx1-ubyte')),
+        )
         with open(os.path.join(self.processed_folder, 'train.pt'), 'wb') as f:
             torch.save(training_set, f)
         with open(os.path.join(self.processed_folder, 'test.pt'), 'wb') as f:
@@ -153,8 +189,9 @@ class MNISTDataset(GEORGEDataset):
         data, original_labels = torch.load(os.path.join(self.processed_folder, 'train.pt'))
         original_labels = original_labels.numpy()
         original_label_counts = np.bincount(original_labels)
-        assert all(i > 0 for i in original_label_counts), \
-            'set(labels) must consist of consecutive numbers in [0, S]'
+        assert all(
+            i > 0 for i in original_label_counts
+        ), 'set(labels) must consist of consecutive numbers in [0, S]'
         val_quota = np.round(original_label_counts * val_proportion).astype(np.int)
 
         # reset seed here in case random fns called again (i.e. if get_loaders called twice)
@@ -178,17 +215,22 @@ class MNISTDataset(GEORGEDataset):
 
         train_idxs = sorted(train_idxs)
         val_idxs = sorted(val_idxs)
-        assert len(set(val_idxs) & set(train_idxs)) == 0, \
-            'valset and trainset must be mutually exclusive'
+        assert (
+            len(set(val_idxs) & set(train_idxs)) == 0
+        ), 'valset and trainset must be mutually exclusive'
 
-        logging.info(f'Creating training set with class counts:\n' +
-                     f'{np.bincount(original_labels[train_idxs])}')
+        logging.info(
+            f'Creating training set with class counts:\n'
+            + f'{np.bincount(original_labels[train_idxs])}'
+        )
         trainset = (data[train_idxs], torch.tensor(original_labels[train_idxs]))
         with open(os.path.join(self.processed_folder, 'train.pt'), 'wb') as f:
             torch.save(trainset, f)
 
-        logging.info(f'Creating validation set with class counts:\n' +
-                     f'{np.bincount(original_labels[val_idxs])}')
+        logging.info(
+            f'Creating validation set with class counts:\n'
+            + f'{np.bincount(original_labels[val_idxs])}'
+        )
         valset = (data[val_idxs], torch.tensor(original_labels[val_idxs]))
         with open(os.path.join(self.processed_folder, 'val.pt'), 'wb') as f:
             torch.save(valset, f)
@@ -198,22 +240,22 @@ class MNISTDataset(GEORGEDataset):
 def read_label_file(path):
     with open(path, 'rb') as f:
         x = read_sn3_pascalvincent_tensor(f, strict=False)
-    assert (x.dtype == torch.uint8)
-    assert (x.ndimension() == 1)
+    assert x.dtype == torch.uint8
+    assert x.ndimension() == 1
     return x.long()
 
 
 def read_image_file(path):
     with open(path, 'rb') as f:
         x = read_sn3_pascalvincent_tensor(f, strict=False)
-    assert (x.dtype == torch.uint8)
-    assert (x.ndimension() == 3)
+    assert x.dtype == torch.uint8
+    assert x.ndimension() == 3
     return x
 
 
 def read_sn3_pascalvincent_tensor(path, strict=True):
     """Read a SN3 file in "Pascal Vincent" format (Lush file 'libidx/idx-io.lsh').
-       Argument may be a filename, compressed filename, or file object.
+    Argument may be a filename, compressed filename, or file object.
     """
     # typemap
     if not hasattr(read_sn3_pascalvincent_tensor, 'typemap'):
@@ -223,7 +265,7 @@ def read_sn3_pascalvincent_tensor(path, strict=True):
             11: (torch.int16, np.dtype('>i2'), 'i2'),
             12: (torch.int32, np.dtype('>i4'), 'i4'),
             13: (torch.float32, np.dtype('>f4'), 'f4'),
-            14: (torch.float64, np.dtype('>f8'), 'f8')
+            14: (torch.float64, np.dtype('>f8'), 'f8'),
         }
     # read
     with open_maybe_compressed_file(path) as f:
@@ -235,7 +277,7 @@ def read_sn3_pascalvincent_tensor(path, strict=True):
     assert nd >= 1 and nd <= 3
     assert ty >= 8 and ty <= 14
     m = read_sn3_pascalvincent_tensor.typemap[ty]
-    s = [get_int(data[4 * (i + 1):4 * (i + 2)]) for i in range(nd)]
+    s = [get_int(data[4 * (i + 1) : 4 * (i + 2)]) for i in range(nd)]
     parsed = np.frombuffer(data, dtype=m[1], offset=(4 * (nd + 1)))
     assert parsed.shape[0] == np.prod(s) or not strict
     return torch.from_numpy(parsed.astype(m[2], copy=False)).view(*s)
@@ -247,15 +289,17 @@ def get_int(b):
 
 def open_maybe_compressed_file(path):
     """Return a file object that possibly decompresses 'path' on the fly.
-       Decompression occurs when argument `path` is a string and ends with '.gz' or '.xz'.
+    Decompression occurs when argument `path` is a string and ends with '.gz' or '.xz'.
     """
     if not isinstance(path, torch._six.string_classes):
         return path
     if path.endswith('.gz'):
         import gzip
+
         return gzip.open(path, 'rb')
     if path.endswith('.xz'):
         import lzma
+
         return lzma.open(path, 'rb')
     return open(path, 'rb')
 
@@ -263,7 +307,7 @@ def open_maybe_compressed_file(path):
 def get_transform_MNIST(resize=True, augment=False):
     test_transform_list = [
         transforms.ToTensor(),
-        transforms.Normalize(**MNISTDataset._normalization_stats)
+        transforms.Normalize(**MNISTDataset._normalization_stats),
     ]
     if resize:
         test_transform_list.insert(0, transforms.Resize((32, 32)))
@@ -272,6 +316,6 @@ def get_transform_MNIST(resize=True, augment=False):
 
     train_transform_list = [
         transforms.RandomCrop(MNISTDataset._resolution, padding=4),
-        transforms.RandomHorizontalFlip()
+        transforms.RandomHorizontalFlip(),
     ] + test_transform_list
     return transforms.Compose(train_transform_list)

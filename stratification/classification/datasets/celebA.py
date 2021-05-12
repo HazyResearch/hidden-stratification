@@ -1,9 +1,10 @@
-import os
-import torch
-import pandas as pd
-from PIL import Image
 import logging
+import os
+
+from PIL import Image
 import numpy as np
+import pandas as pd
+import torch
 import torchvision.transforms as transforms
 
 from .base import GEORGEDataset
@@ -15,21 +16,26 @@ class CelebADataset(GEORGEDataset):
     Note: idx and filenames are off by one.
     Adapted from https://github.com/kohpangwei/group_DRO/blob/master/data/celebA_dataset.py
     """
+
     superclass_names = ['No Blond Hair', 'Blond Hair']
     true_subclass_names = [
-        'Blond_Hair = 0, Male = 0', 'Blond_Hair = 0, Male = 1', 'Blond_Hair = 1, Male = 0',
-        'Blond_Hair = 1, Male = 1'
+        'Blond_Hair = 0, Male = 0',
+        'Blond_Hair = 0, Male = 1',
+        'Blond_Hair = 1, Male = 0',
+        'Blond_Hair = 1, Male = 1',
     ]
     _channels = 3
     _resolution = 224
     _normalization_stats = {'mean': (0.485, 0.456, 0.406), 'std': (0.229, 0.224, 0.225)}
 
-    def __init__(self, root, split, transform=None, download=False, ontology='default',
-                 augment=False):
-        assert (transform is None)
+    def __init__(
+        self, root, split, transform=None, download=False, ontology='default', augment=False
+    ):
+        assert transform is None
         transform = get_transform_celebA()
-        super().__init__('celebA', root, split, transform=transform, download=download,
-                         ontology=ontology)
+        super().__init__(
+            'celebA', root, split, transform=transform, download=download, ontology=ontology
+        )
 
     def _download(self):
         """Raises an error if the raw dataset has not yet been downloaded."""
@@ -37,15 +43,17 @@ class CelebADataset(GEORGEDataset):
 
     def _check_exists(self):
         """Checks whether or not the waterbirds labels CSV has been initialized."""
-        return os.path.isdir(os.path.join(self.root, 'celebA', 'img_align_celeba')) and \
-               os.path.isfile(os.path.join(self.root, 'celebA', 'list_attr_celeba.csv'))
+        return os.path.isdir(
+            os.path.join(self.root, 'celebA', 'img_align_celeba')
+        ) and os.path.isfile(os.path.join(self.root, 'celebA', 'list_attr_celeba.csv'))
 
     def _load_samples(self):
         self.target_name = 'Blond_Hair'
         self.confounder_names = ['Male']
 
-        attrs_df = pd.read_csv(os.path.join(self.root, 'celebA', 'list_attr_celeba.csv'),
-                               delim_whitespace=True)
+        attrs_df = pd.read_csv(
+            os.path.join(self.root, 'celebA', 'list_attr_celeba.csv'), delim_whitespace=True
+        )
 
         # Split out filenames and attribute names
         self.data_dir = os.path.join(self.root, 'celebA', 'img_align_celeba')
@@ -76,8 +84,9 @@ class CelebADataset(GEORGEDataset):
         group_array = (y_array * (self._num_subclasses / 2) + confounder_array).astype('int')
 
         # Read in train/val/test splits
-        split_df = pd.read_csv(os.path.join(self.root, 'celebA', 'list_eval_partition.csv'),
-                               delim_whitespace=True)
+        split_df = pd.read_csv(
+            os.path.join(self.root, 'celebA', 'list_eval_partition.csv'), delim_whitespace=True
+        )
         split_array = split_df['partition'].values
         split_dict = {'train': 0, 'val': 1, 'test': 2}
         split_indices = split_array == split_dict[self.split]
@@ -85,7 +94,7 @@ class CelebADataset(GEORGEDataset):
         X = filename_array[split_indices]
         Y_dict = {
             'superclass': torch.tensor(y_array[split_indices]),
-            'true_subclass': torch.tensor(group_array[split_indices])
+            'true_subclass': torch.tensor(group_array[split_indices]),
         }
         return X, Y_dict
 
@@ -114,10 +123,12 @@ def get_transform_celebA():
     orig_min_dim = min(orig_w, orig_h)
     target_resolution = (224, 224)
 
-    transform = transforms.Compose([
-        transforms.CenterCrop(orig_min_dim),
-        transforms.Resize(target_resolution),
-        transforms.ToTensor(),
-        transforms.Normalize(**CelebADataset._normalization_stats),
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.CenterCrop(orig_min_dim),
+            transforms.Resize(target_resolution),
+            transforms.ToTensor(),
+            transforms.Normalize(**CelebADataset._normalization_stats),
+        ]
+    )
     return transform

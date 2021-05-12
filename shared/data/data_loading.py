@@ -4,6 +4,7 @@ from typing import Dict, NamedTuple, Optional, Tuple, Union
 
 import ethicml as em
 import ethicml.vision as emvi
+from hydra.utils import to_absolute_path
 import torch
 from torch import Tensor
 import torch.nn as nn
@@ -12,7 +13,6 @@ from torch.utils.data.dataset import ConcatDataset
 from torchvision import transforms as TF
 from torchvision.datasets import MNIST
 
-from hydra.utils import to_absolute_path
 from shared.configs import (
     BaseConfig,
     CelebaConfig,

@@ -4,9 +4,9 @@ import os
 import random
 import shutil
 
+from PIL import Image
 import pandas as pd
 import requests
-from PIL import Image
 from tqdm import tqdm
 
 from stratification.utils.utils import flatten_dict
@@ -15,22 +15,35 @@ from stratification.utils.utils import flatten_dict
 def main():
     parser = argparse.ArgumentParser(description='Downloads the ISIC dataset')
     parser.add_argument(
-        '--root', default='./data/isic',
-        help='Directory in which to place the `raw` and `processed` ISIC subdirectories.')
+        '--root',
+        default='./data/isic',
+        help='Directory in which to place the `raw` and `processed` ISIC subdirectories.',
+    )
     parser.add_argument(
-        '--max_samples', default=25000, help='The maximum number of ISIC images to download. '
-        'At time of writing there are ~23000 images in the database.')
+        '--max_samples',
+        default=25000,
+        help='The maximum number of ISIC images to download. '
+        'At time of writing there are ~23000 images in the database.',
+    )
     # options for the training/validation/test split
     parser.add_argument(
-        '--preset_split_path', default=None, help='If not None, generates a dataset using the '
-        'split json file in the provided path')
+        '--preset_split_path',
+        default=None,
+        help='If not None, generates a dataset using the ' 'split json file in the provided path',
+    )
     parser.add_argument('--seed', default=1, help='The random seed used when splitting the data.')
     parser.add_argument(
-        '--val_proportion', default=0.1, help='The proportion of the overall dataset to allocate '
-        'to the validation partition of the dataset.')
+        '--val_proportion',
+        default=0.1,
+        help='The proportion of the overall dataset to allocate '
+        'to the validation partition of the dataset.',
+    )
     parser.add_argument(
-        '--test_proportion', default=0.1, help='The proportion of the overall dataset to allocate '
-        'to the test partition of the dataset.')
+        '--test_proportion',
+        default=0.1,
+        help='The proportion of the overall dataset to allocate '
+        'to the test partition of the dataset.',
+    )
 
     args = parser.parse_args()
     root = args.root
@@ -48,8 +61,13 @@ def main():
     print(
         f"Preprocessing metadata (adding columns, removing uncertain diagnoses) and saving into {os.path.join(root, 'processed', 'labels.csv')}..."
     )
-    preprocess_isic_metadata(root, preset_split_path, seed=seed, val_proportion=val_proportion,
-                             test_proportion=test_proportion)
+    preprocess_isic_metadata(
+        root,
+        preset_split_path,
+        seed=seed,
+        val_proportion=val_proportion,
+        test_proportion=test_proportion,
+    )
     print(
         f"Preprocessing images (transforming to 3-channel RGB, resizing to 224x224) and saving into {os.path.join(root, 'raw', 'images')}..."
     )
@@ -60,8 +78,10 @@ def download_isic_metadata(root, max_samples):
     """Downloads the metadata CSV from the ISIC website."""
     raw_dir = os.path.join(root, 'raw')
     os.makedirs(raw_dir, exist_ok=True)
-    r = requests.get(f'https://isic-archive.com/api/v1/image?limit={max_samples}'
-                     f'&sort=name&sortdir=1&detail=false')
+    r = requests.get(
+        f'https://isic-archive.com/api/v1/image?limit={max_samples}'
+        f'&sort=name&sortdir=1&detail=false'
+    )
     image_ids = r.json()
     image_ids = [image_id['_id'] for image_id in image_ids]
     entries = []
@@ -80,8 +100,9 @@ def download_isic_images(root):
     """Given the metadata CSV, downloads the ISIC images."""
     metadata_path = os.path.join(root, 'raw', 'metadata.csv')
     if not os.path.isfile(metadata_path):
-        raise FileNotFoundError('metadata.csv not downloaded. '
-                                'Run `download_isic_data` before this function.')
+        raise FileNotFoundError(
+            'metadata.csv not downloaded. ' 'Run `download_isic_data` before this function.'
+        )
     metadata_df = pd.read_csv(metadata_path)
     metadata_df = metadata_df.set_index('_id')
 
@@ -97,8 +118,9 @@ def download_isic_images(root):
         del r
 
 
-def preprocess_isic_metadata(root, preset_split_path, seed=1, val_proportion=0.1,
-                             test_proportion=0.1):
+def preprocess_isic_metadata(
+    root, preset_split_path, seed=1, val_proportion=0.1, test_proportion=0.1
+):
     """Preprocesses the raw ISIC metadata."""
     raw_dir = os.path.join(root, 'raw')
     processed_dir = os.path.join(root, 'processed')
@@ -106,14 +128,17 @@ def preprocess_isic_metadata(root, preset_split_path, seed=1, val_proportion=0.1
 
     metadata_path = os.path.join(raw_dir, 'metadata.csv')
     if not os.path.isfile(metadata_path):
-        raise FileNotFoundError('metadata.csv not found while preprocessing ISIC dataset. '
-                                'Run `download_isic_metadata` and `download_isic_images` before '
-                                'calling `preprocess_isic_metadata`.')
+        raise FileNotFoundError(
+            'metadata.csv not found while preprocessing ISIC dataset. '
+            'Run `download_isic_metadata` and `download_isic_images` before '
+            'calling `preprocess_isic_metadata`.'
+        )
     metadata_df = pd.read_csv(metadata_path)
     metadata_df = metadata_df.set_index('_id')
     labels_df = _remove_uncertain_diagnoses(metadata_df)
-    labels_df = _add_split_column(labels_df, preset_split_path, seed, val_proportion,
-                                  test_proportion)
+    labels_df = _add_split_column(
+        labels_df, preset_split_path, seed, val_proportion, test_proportion
+    )
     labels_df = _add_patch_column(labels_df)
     labels_df.to_csv(os.path.join(processed_dir, 'labels.csv'))
 
@@ -122,8 +147,10 @@ def preprocess_isic_images(root):
     """Preprocesses the images."""
     raw_dir = os.path.join(root, 'raw')
     if not os.path.isdir(os.path.join(raw_dir, 'images')):
-        raise FileNotFoundError('Raw ISIC images not found. Run `download_isic_images` before '
-                                'calling `preprocess_isic_images`.')
+        raise FileNotFoundError(
+            'Raw ISIC images not found. Run `download_isic_images` before '
+            'calling `preprocess_isic_images`.'
+        )
     processed_dir = os.path.join(root, 'processed')
 
     labels_df = pd.read_csv(os.path.join(processed_dir, 'labels.csv'))
@@ -143,8 +170,9 @@ def preprocess_isic_images(root):
 
 
 def _remove_uncertain_diagnoses(metadata_df):
-    labels_df = metadata_df.loc[metadata_df['meta.clinical.benign_malignant'].isin(
-        {'benign', 'malignant'})]  # throw out unknowns
+    labels_df = metadata_df.loc[
+        metadata_df['meta.clinical.benign_malignant'].isin({'benign', 'malignant'})
+    ]  # throw out unknowns
     print(
         f"Using {len(labels_df)} out of {len(metadata_df)} total samples with confirmed 'benign' or 'malignant' diagnoses..."
     )
@@ -162,10 +190,12 @@ def _add_split_column(labels_df, preset_split_path, seed, val_proportion, test_p
     idxs = labels_df.index.tolist()
     if preset_split_path is not None:
         train_idxs, val_idxs, test_idxs = _get_preset_train_val_test_split(
-            labels_df, preset_split_path)
+            labels_df, preset_split_path
+        )
     else:
         train_idxs, val_idxs, test_idxs = _get_random_train_val_test_split(
-            idxs, seed, val_proportion, test_proportion)
+            idxs, seed, val_proportion, test_proportion
+        )
     # add to labels_df
     labels_df['split'] = None
     labels_df.loc[train_idxs, 'split'] = 'train'
@@ -203,8 +233,8 @@ def _get_random_train_val_test_split(idxs, seed, val_proportion, test_proportion
     train_idxs = shuffled_idxs[:train_n]
 
     val_n = int(val_proportion * n)
-    val_idxs = shuffled_idxs[train_n:(train_n + val_n)]
-    test_idxs = shuffled_idxs[(train_n + val_n):]
+    val_idxs = shuffled_idxs[train_n : (train_n + val_n)]
+    test_idxs = shuffled_idxs[(train_n + val_n) :]
     return (train_idxs, val_idxs, test_idxs)
 
 

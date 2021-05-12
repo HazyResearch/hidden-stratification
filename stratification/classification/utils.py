@@ -1,11 +1,12 @@
-import torch
 from sklearn.metrics import roc_auc_score
+import torch
 
 
 class AverageMeter:
     """Computes and stores the average and current value
-       Imported from https://github.com/pytorch/examples/blob/master/imagenet/main.py#L247-L262
+    Imported from https://github.com/pytorch/examples/blob/master/imagenet/main.py#L247-L262
     """
+
     def __init__(self):
         self.reset()
 
@@ -26,7 +27,7 @@ class AverageMeter:
         return f'sum: {self.sum}, count: {self.count}, avg: {self.avg}'
 
 
-def compute_accuracy(output, target, topk=(1, ), return_preds=False):
+def compute_accuracy(output, target, topk=(1,), return_preds=False):
     """Computes the precision@k for the specified values of k"""
     topk_orig = topk
     topk = [k for k in topk if k <= output.size(1)]
@@ -41,7 +42,7 @@ def compute_accuracy(output, target, topk=(1, ), return_preds=False):
     res = []
     for k in topk:
         correct_k = correct[:k].view(-1).float().sum(0)
-        res.append(correct_k.mul_(100. / batch_size))
+        res.append(correct_k.mul_(100.0 / batch_size))
     res.extend(100 for k in topk_orig if k > output.size(1))
     if return_preds:
         return res, label_preds

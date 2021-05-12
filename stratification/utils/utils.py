@@ -1,13 +1,13 @@
 import ast
-import uuid
-import datetime
-import subprocess
-import random
-import time
-import json
-from functools import singledispatch
-from datetime import datetime, timedelta
 from collections import MutableMapping
+import datetime
+from datetime import datetime, timedelta
+from functools import singledispatch
+import json
+import random
+import subprocess
+import time
+import uuid
 
 import numpy as np
 import torch
@@ -26,20 +26,36 @@ def format_timedelta(timedelta):
 
 
 class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types """
+    """Special json encoder for numpy types"""
+
     def default(self, obj):
-        if isinstance(obj, (np.int_, np.intc, np.intp, np.int8, np.int16, np.int32, np.int64,
-                            np.uint8, np.uint16, np.uint32, np.uint64)):
+        if isinstance(
+            obj,
+            (
+                np.int_,
+                np.intc,
+                np.intp,
+                np.int8,
+                np.int16,
+                np.int32,
+                np.int64,
+                np.uint8,
+                np.uint16,
+                np.uint32,
+                np.uint64,
+            ),
+        ):
             return int(obj)
         elif isinstance(obj, (np.float_, np.float16, np.float32, np.float64)):
             return float(obj)
-        elif isinstance(obj, (np.ndarray, )):  #### This is the fix
+        elif isinstance(obj, (np.ndarray,)):  #### This is the fix
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
 
 
 class ScientificNotationDecoder(json.JSONDecoder):
     """Decodes floats incorrectly parsed by ActionJsonSchema (e.g. 1e-5)"""
+
     def __init__(self, *args, **kwargs):
         json.JSONDecoder.__init__(self, object_hook=self.object_hook, *args, **kwargs)
 
@@ -54,7 +70,7 @@ class ScientificNotationDecoder(json.JSONDecoder):
 def keys_to_strings(ob):
     """
     Converts keys in a dictionary object to strings for JSON.
-    
+
     source:
     https://stackoverflow.com/questions/47568356/python-convert-all-keys-to-strings
     """
@@ -84,7 +100,7 @@ def set_by_dotted_path(d, path, value):
     """
     Change an entry in a nested dict using a dotted path.
     Raises exception if path not in d.
-    
+
     Examples
     --------
     >>> d = {'foo': {'bar': 7}}
@@ -100,8 +116,7 @@ def set_by_dotted_path(d, path, value):
 
     current_option = d
     for idx, p in enumerate(split_path):
-        assert p in current_option, \
-            f'Path {split_path} does not exist in dictionary.'
+        assert p in current_option, f'Path {split_path} does not exist in dictionary.'
 
         if idx != split_path_len - 1:
             current_option = current_option[p]
@@ -112,11 +127,12 @@ def set_by_dotted_path(d, path, value):
 def merge_dicts(a, b):
     """
     Returns a dictionary in which b is merged into a.
-    
+
     This is different than the naive approach {**a, **b} because it preserves
-    all existing values in nested dictionaries that appear in both a and b, 
+    all existing values in nested dictionaries that appear in both a and b,
     rather than overwriting a's entire nested dictionary with b's.
     """
+
     def merge_dicts_rec(a, b):
         for key in b:
             if key in a:
@@ -141,9 +157,14 @@ def get_git_commit_info():
     saved_infos = []
     for cmd, do_check in zip(cmds, do_checks):
         try:
-            process_result = subprocess.run(cmd, shell=True, check=do_check,
-                                            universal_newlines=True, stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
+            process_result = subprocess.run(
+                cmd,
+                shell=True,
+                check=do_check,
+                universal_newlines=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
             saved_infos.append((process_result.returncode, process_result.stdout.strip()))
             err_msg = None
         except subprocess.CalledProcessError as e:

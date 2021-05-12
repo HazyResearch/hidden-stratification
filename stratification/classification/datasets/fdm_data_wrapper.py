@@ -1,9 +1,9 @@
 from typing import Dict, Tuple
-from typing_extensions import Literal
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
+from typing_extensions import Literal
 
 from fdm.models import Classifier
 from shared.configs import BaseConfig
@@ -17,7 +17,9 @@ DATA_SPLITS = Literal['train', 'train_clean', 'val', 'test']
 
 
 class FdmDatasetWrapper(GEORGEDataset):
-    def __init__(self, cfg: BaseConfig, dataset_triplet: DatasetTriplet, split: DATA_SPLITS) -> None:
+    def __init__(
+        self, cfg: BaseConfig, dataset_triplet: DatasetTriplet, split: DATA_SPLITS
+    ) -> None:
         self.cfg = cfg
         self.triplet = dataset_triplet
         super().__init__(name=cfg.data.log_name, root="no need to know", split=split)

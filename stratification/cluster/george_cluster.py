@@ -1,27 +1,31 @@
-from copy import deepcopy
-import os
 from collections import defaultdict
+from copy import deepcopy
 import json
 import logging
+import os
 
-import torch
 import numpy as np
+import torch
 
 from stratification.cluster.models.cluster import DummyClusterer
-from stratification.cluster.utils import get_cluster_mean_loss, get_cluster_composition, get_k_from_model
-
+from stratification.cluster.utils import (
+    get_cluster_composition,
+    get_cluster_mean_loss,
+    get_k_from_model,
+)
 from stratification.utils.logger import init_logger
 
 
 class GEORGECluster:
     """Executes the cluster stage of the GEORGE algorithm.
-    
+
     Args:
         cluster_config(dict): Contains the parameters required to execute this step.
             See utils.schema for type information and examples.
         save_dir(str, optional): Directory at which to save logging information.
             If None, logging information is not saved. Default is None.
     """
+
     def __init__(self, cluster_config, save_dir=None, log_format='full'):
         self.config = cluster_config
         self.save_dir = save_dir
@@ -34,7 +38,7 @@ class GEORGECluster:
         """Computes metrics using the sample data provided in inputs.
 
         Args:
-            inputs(Dict[str, Sequence]) inputs of the same format as 
+            inputs(Dict[str, Sequence]) inputs of the same format as
                 those described in GEORGECluster.train
             assignments(Sequence) the cluster assignments for each input
 
@@ -58,8 +62,8 @@ class GEORGECluster:
 
         Args:
             cluster_model(Any): The model used to produce cluster assignments. Must
-                implement `fit` and `predict`. Further, the number of clusters the 
-                cluster_model will attempt to fit must be accessible, through either 
+                implement `fit` and `predict`. Further, the number of clusters the
+                cluster_model will attempt to fit must be accessible, through either
                 (1) `n_clusters` or (2) `n_components`. This is due to the
                 limitations of the sklearn implementations of KMeans and GMMs.
             inputs(Dict[str, Sequence]): a dictionary object containing the model
@@ -73,12 +77,12 @@ class GEORGECluster:
                     'targets': np.ndarray of shape (N, ),
                     'probs': np.ndarray of shape (N, ),
                     'preds': np.ndarray of shape (N, ),
-                    'losses': np.ndarray of shape (N, ), 
+                    'losses': np.ndarray of shape (N, ),
                 }
                 Future work is to further modularize the cluster code to mitigate
                 dependencies on this object. For best results, train classifiers
                 using GEORGEHarness.classify.
-            
+
         Returns:
             group_to_models(List[Tuple[type(cluster_model), type(reduction_model)]]): the list
                 of reduction and cluster models fit on each group, where the idx
@@ -118,17 +122,17 @@ class GEORGECluster:
 
     def evaluate(self, group_to_models, split_inputs):
         """Returns cluster assignments for each of the inputs.
-        
+
         Args:
             group_to_models(List[reduction_model]):
                 the models produced by GEORGECluster.train. There should be as many
                 items in this list as groups in the inputs.
             inputs(Dict[str, Sequence]): inputs of the same format as those described in
                 GEORGECluster.train
-        
+
         Returns:
             group_to_metrics(Dict[str, Any]): metrics, partitioned by group.
-            outputs(Dict[str, Any]): the outputs of the model. At time of writing, 
+            outputs(Dict[str, Any]): the outputs of the model. At time of writing,
                 the outputs consists of both the reduced activations and the cluster
                 assignments (`activations` and `assignments` keys, respectively).
         """

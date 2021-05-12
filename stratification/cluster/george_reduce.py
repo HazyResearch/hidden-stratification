@@ -1,13 +1,12 @@
-from copy import deepcopy
-import os
 from collections import defaultdict
+from copy import deepcopy
 import logging
+import os
 
-import torch
 import numpy as np
+import torch
 
 import stratification.cluster.models.reduction as reduction_models
-
 from stratification.utils.logger import init_logger
 
 
@@ -20,6 +19,7 @@ class GEORGEReducer:
         save_dir(str, optional): Directory at which to save logging information.
             If None, logging information is not saved. Default is None.
     """
+
     def __init__(self, cluster_config, save_dir=None, log_format='full'):
         self.config = cluster_config
         self.save_dir = save_dir
@@ -67,11 +67,11 @@ class GEORGEReducer:
                     'targets': np.ndarray of shape (N, ),
                     'probs': np.ndarray of shape (N, ),
                     'preds': np.ndarray of shape (N, ),
-                    'losses': np.ndarray of shape (N, ), 
+                    'losses': np.ndarray of shape (N, ),
                 }
             reduction_model(Any): The model used for dimensionality reduction
                 of the activations.
-            
+
         Returns:
             group_to_models(List[reduction_model]): the list of reduction models
                 fit on each group, where the idx indicates the group.
@@ -82,16 +82,22 @@ class GEORGEReducer:
         if 'losses' not in inputs_tr or len(inputs_tr['losses']) == 0:
             inputs_val = inputs['val']
             inputs_test = inputs['test']
-            inputs_tr['losses'] = np.zeros(len(inputs_tr['activations']),
-                                           dtype=inputs_tr['activations'].dtype)
-            inputs_val['losses'] = np.zeros(len(inputs_val['activations']),
-                                            dtype=inputs_val['activations'].dtype)
-            inputs_test['losses'] = np.zeros(len(inputs_test['activations']),
-                                             dtype=inputs_test['activations'].dtype)
+            inputs_tr['losses'] = np.zeros(
+                len(inputs_tr['activations']), dtype=inputs_tr['activations'].dtype
+            )
+            inputs_val['losses'] = np.zeros(
+                len(inputs_val['activations']), dtype=inputs_val['activations'].dtype
+            )
+            inputs_test['losses'] = np.zeros(
+                len(inputs_test['activations']), dtype=inputs_test['activations'].dtype
+            )
 
         if self.config['mean_reduce']:
-            train_means = inputs_tr['activations'].reshape(inputs_tr['activations'].shape[0],
-                                                           -1).mean(axis=0, keepdims=True)
+            train_means = (
+                inputs_tr['activations']
+                .reshape(inputs_tr['activations'].shape[0], -1)
+                .mean(axis=0, keepdims=True)
+            )
         else:
             train_means = None
 
@@ -129,19 +135,21 @@ class GEORGEReducer:
                 items in this list as groups in the inputs.
             inputs(Dict[str, Sequence]): inputs of the same format as those described in
                 GEORGEReduce.train
-        
+
         Returns:
             group_to_metrics(Dict[str, Any]): metrics, partitioned by group.
-            outputs(Dict[str, Any]): the outputs of the model. At time of writing, 
+            outputs(Dict[str, Any]): the outputs of the model. At time of writing,
                 the outputs consists of both the reduced activations and the cluster
                 assignments (`activations` and `assignments` keys, respectively).
         """
-        if self.config['mean_reduce']: assert (train_means is not None)
+        if self.config['mean_reduce']:
+            assert train_means is not None
         group_assignments = split_inputs['superclass']
         group_to_data = self._group(split_inputs, group_assignments)
         groups = np.unique(group_assignments)
-        assert len(group_to_models) <= len(groups), \
-            'There must be a model for each group in the input data.'
+        assert len(group_to_models) <= len(
+            groups
+        ), 'There must be a model for each group in the input data.'
 
         group_to_outputs = {}
         for group in groups:
@@ -169,7 +177,7 @@ class GEORGEReducer:
     def _group(self, data, group_assignments):
         """Partitions the data by group.
 
-        Note: 
+        Note:
             this function assumes that the data is a dictionary of sequences.
             By design, any key-value pair that doesn't describe a sequence is
             ignored in the final partition.
@@ -190,7 +198,8 @@ class GEORGEReducer:
         for group in groups:
             for k, v in data.items():
                 if isinstance(v, np.ndarray):
-                    assert len(group_assignments) == len(v), \
-                        f'group_assignments and "{k}" must be the same length'
+                    assert len(group_assignments) == len(
+                        v
+                    ), f'group_assignments and "{k}" must be the same length'
                     group_to_data[group][k] = v[group_assignments == group]
         return group_to_data

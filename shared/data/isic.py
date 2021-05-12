@@ -1,19 +1,18 @@
 from __future__ import annotations
-
-import logging
-import os
-import shutil
-import zipfile
 from collections.abc import Iterable, Iterator
 from itertools import islice
+import logging
+import os
 from pathlib import Path
+import shutil
 from typing import Callable, ClassVar, NamedTuple, TypeVar, Union
+import zipfile
 
+from PIL import Image
 import numpy as np
 import pandas as pd
 import requests
 import torch
-from PIL import Image
 from torch.tensor import Tensor
 from torch.utils.data.dataset import Dataset
 from torchvision.transforms.transforms import ToTensor

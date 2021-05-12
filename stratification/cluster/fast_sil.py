@@ -3,9 +3,9 @@
 to use CUDA for Silhouette score computation.'''
 
 import numpy as np
-from sklearn.utils import gen_batches, get_chunk_n_rows
-from sklearn.metrics.cluster._unsupervised import *
 from sklearn.metrics import silhouette_samples as s_sil
+from sklearn.metrics.cluster._unsupervised import *
+from sklearn.utils import gen_batches, get_chunk_n_rows
 import torch
 
 
@@ -56,7 +56,7 @@ def _silhouette_reduce(D_chunk, start, labels, label_freqs):
         clust_dists[i] += np.bincount(labels, weights=D_chunk[i], minlength=len(label_freqs))
 
     # intra_index selects intra-cluster distances within clust_dists
-    intra_index = (np.arange(len(D_chunk)), labels[start:start + len(D_chunk)])
+    intra_index = (np.arange(len(D_chunk)), labels[start : start + len(D_chunk)])
     # intra_clust_dists are averaged over cluster size outside this function
     intra_clust_dists = clust_dists[intra_index]
     # of the remaining distances we normalise and extract the minimum
@@ -67,22 +67,24 @@ def _silhouette_reduce(D_chunk, start, labels, label_freqs):
 
 
 def _check_chunk_size(reduced, chunk_size):
-    """Checks chunk is a sequence of expected size or a tuple of same
-    """
+    """Checks chunk is a sequence of expected size or a tuple of same"""
     if reduced is None:
         return
     is_tuple = isinstance(reduced, tuple)
     if not is_tuple:
-        reduced = (reduced, )
+        reduced = (reduced,)
     if any(isinstance(r, tuple) or not hasattr(r, '__iter__') for r in reduced):
-        raise TypeError('reduce_func returned %r. '
-                        'Expected sequence(s) of length %d.' %
-                        (reduced if is_tuple else reduced[0], chunk_size))
+        raise TypeError(
+            'reduce_func returned %r. '
+            'Expected sequence(s) of length %d.' % (reduced if is_tuple else reduced[0], chunk_size)
+        )
     if any(len(r) != chunk_size for r in reduced):
         actual_size = tuple(len(r) for r in reduced)
-        raise ValueError('reduce_func returned object of length %s. '
-                         'Expected same length as input: %d.' %
-                         (actual_size if is_tuple else actual_size[0], chunk_size))
+        raise ValueError(
+            'reduce_func returned object of length %s. '
+            'Expected same length as input: %d.'
+            % (actual_size if is_tuple else actual_size[0], chunk_size)
+        )
 
 
 def pairwise_distances_chunked_cuda(X, reduce_func=None, verbose=False):
@@ -194,14 +196,16 @@ def pairwise_distances_chunked_cuda(X, reduce_func=None, verbose=False):
     #  - this does not account for any temporary memory usage while
     #    calculating distances (e.g. difference of vectors in manhattan
     #    distance.
-    chunk_n_rows = get_chunk_n_rows(row_bytes=8 * len(Y), max_n_rows=n_samples_X,
-                                    working_memory=None)
+    chunk_n_rows = get_chunk_n_rows(
+        row_bytes=8 * len(Y), max_n_rows=n_samples_X, working_memory=None
+    )
     slices = gen_batches(n_samples_X, chunk_n_rows)
 
     X_full = torch.tensor(X).cuda()
-    Xnorms = torch.norm(X_full, dim=1, keepdim=True)**2
+    Xnorms = torch.norm(X_full, dim=1, keepdim=True) ** 2
     for sl in slices:
-        if verbose: print(sl)
+        if verbose:
+            print(sl)
         if sl.start == 0 and sl.stop == n_samples_X:
             X_chunk = X  # enable optimised paths for X is Y
         else:
@@ -209,7 +213,7 @@ def pairwise_distances_chunked_cuda(X, reduce_func=None, verbose=False):
         pX = torch.tensor(X_chunk).cuda()
         d2 = Xnorms[sl] - 2 * torch.matmul(pX, X_full.t()) + Xnorms.t()
         d2 = torch.sqrt(torch.nn.functional.relu(d2)).cpu().numpy()
-        d2.flat[sl.start::len(X) + 1] = 0
+        d2.flat[sl.start :: len(X) + 1] = 0
         D_chunk = d2
         if reduce_func is not None:
             chunk_size = D_chunk.shape[0]

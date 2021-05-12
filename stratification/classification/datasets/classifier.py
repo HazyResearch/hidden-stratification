@@ -1,4 +1,4 @@
-from typing import Sequence, Optional
+from typing import Optional, Sequence
 
 import torch
 from torch import nn
@@ -6,8 +6,15 @@ from torch.utils.data import DataLoader
 from torchvision.models import resnet50
 
 from fdm.models import Classifier
-from shared.configs import Mp32x23Net, Mp64x64Net, FcNet
-from shared.configs import BaseConfig, ImageDatasetConfig, CmnistConfig, CelebaConfig
+from shared.configs import (
+    BaseConfig,
+    CelebaConfig,
+    CmnistConfig,
+    FcNet,
+    ImageDatasetConfig,
+    Mp32x23Net,
+    Mp64x64Net,
+)
 from shared.utils import ModelFn, prod
 
 

@@ -1,5 +1,6 @@
-import torch.nn as nn
 from collections import OrderedDict
+
+import torch.nn as nn
 
 
 class ShallowCNN(nn.Module):
@@ -9,9 +10,16 @@ class ShallowCNN(nn.Module):
         in_channels = kwargs.get('num_channels', 1)
         classes = kwargs.get('num_classes', 10)
         self.convnet = nn.Sequential(
-            OrderedDict([('c1', nn.Conv2d(in_channels, 6, kernel_size=(5, 5))),
-                         ('relu1', nn.ReLU()), ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
-                         ('c3', nn.Conv2d(6, 8, kernel_size=(5, 5))), ('relu3', nn.ReLU())]))
+            OrderedDict(
+                [
+                    ('c1', nn.Conv2d(in_channels, 6, kernel_size=(5, 5))),
+                    ('relu1', nn.ReLU()),
+                    ('s2', nn.MaxPool2d(kernel_size=(2, 2), stride=2)),
+                    ('c3', nn.Conv2d(6, 8, kernel_size=(5, 5))),
+                    ('relu3', nn.ReLU()),
+                ]
+            )
+        )
 
         # Store the name of the layer whose output we want to use as features
         # (typically the last operation before the classification layer)

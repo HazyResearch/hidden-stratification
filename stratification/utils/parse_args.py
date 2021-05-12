@@ -1,14 +1,14 @@
-import json
 import argparse
+import json
+
 from jsonargparse import ActionJsonSchema, namespace_to_dict
 
-from .utils import ScientificNotationDecoder, convert_value, set_by_dotted_path
 from .schema import schema
+from .utils import ScientificNotationDecoder, convert_value, set_by_dotted_path
 
 
 def get_config(args_list=None):
-    """
-    """
+    """ """
     # load and validate config file
     parser = argparse.ArgumentParser()
     parser.add_argument('config', action=ActionJsonSchema(schema=schema))

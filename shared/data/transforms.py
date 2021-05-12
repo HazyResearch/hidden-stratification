@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from typing import ClassVar, Sequence
 
 import torch

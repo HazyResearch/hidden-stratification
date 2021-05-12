@@ -1,47 +1,53 @@
+from collections import defaultdict
+from copy import deepcopy
+import json
 import logging
 import os
-import json
 import time
-from copy import deepcopy
-from collections import defaultdict
 
-import torch
 import numpy as np
+import torch
 from torch.utils.data import DataLoader
 from torch.utils.data.sampler import WeightedRandomSampler
 
-from stratification.utils.utils import NumpyEncoder, get_unique_str, keys_to_strings, merge_dicts
-from stratification.utils.logger import init_logger
-from stratification.utils.visualization import visualize_clusters_by_group
-
 from stratification.classification.datasets import *
+from stratification.classification.george_classification import GEORGEClassification
 from stratification.classification.models import *
+from stratification.cluster.george_cluster import GEORGECluster
+from stratification.cluster.george_reduce import GEORGEReducer
 from stratification.cluster.models.cluster import *
 from stratification.cluster.models.reduction import *
-
-from stratification.classification.george_classification import GEORGEClassification
-from stratification.cluster.george_reduce import GEORGEReducer
-from stratification.cluster.george_cluster import GEORGECluster
 from stratification.cluster.utils import get_k_from_model
+from stratification.utils.logger import init_logger
+from stratification.utils.utils import (
+    NumpyEncoder,
+    get_unique_str,
+    keys_to_strings,
+    merge_dicts,
+)
+from stratification.utils.visualization import visualize_clusters_by_group
 
 
 class GEORGEHarness:
-    """Training harness for the GEORGE algorithm. 
-    
+    """Training harness for the GEORGE algorithm.
+
     Note:
-        Users can execute all (using `run`) or some (using `classify` and `cluster`) 
+        Users can execute all (using `run`) or some (using `classify` and `cluster`)
         parts of the algorithm. The harness is meant to facilitate interactions with
         GEORGEClassification and GEORGECluster– formatting outputs and saving artifacts.
-        
+
     Args:
         exp_dir(str): the directory in which to store all experiment artifacts,
             including the metrics, cluster assignments, and visualizations.
         use_cuda(bool, optional): a flag describing whether or not to train on
             the GPU.
     """
+
     def __init__(self, config, use_cuda=False, log_format='full'):
-        if config['classification_config']['eval_only'] or config['classification_config'][
-                'save_act_only']:
+        if (
+            config['classification_config']['eval_only']
+            or config['classification_config']['save_act_only']
+        ):
             self.exp_dir = config['activations_dir']
         else:
             self.exp_dir = os.path.join(config['exp_dir'], 'run_' + get_unique_str())
@@ -53,15 +59,16 @@ class GEORGEHarness:
     def save_full_config(self, config):
         self._save_config(self.exp_dir, config, msg='Saving full config')
 
-    def run_george(self, config, dataloaders, model, cluster_model, reduction_model,
-                   activation_layer=None):
+    def run_george(
+        self, config, dataloaders, model, cluster_model, reduction_model, activation_layer=None
+    ):
         """Runs all three stages of the GEORGE pipeline: ERM, cluster, DRO.
-        
+
         Args:
-            config(dict): contains nested classification_config and 
+            config(dict): contains nested classification_config and
                 cluster_config dictionaries.
             dataloaders(Dict[str, DataLoader]): a dictionary mapping a data split
-                to its given DataLoader (note that all data splits in DATA_SPLITS 
+                to its given DataLoader (note that all data splits in DATA_SPLITS
                 must be specified). More information can be found in
                 classification.datasets.
             model(nn.Module): a PyTorch model.
@@ -69,9 +76,9 @@ class GEORGEHarness:
                 methods. For more details, see cluster.george_cluster.
             reduction_model(Any): a dimensionality reduction model. Must implement
                 `fit` and `transform`. For more details, see cluster.george_cluster.
-            
+
         Returns:
-            outputs(List[str]): 
+            outputs(List[str]):
                 contains the paths to the artifacts for each phase of the algorithm.
         """
         self.save_full_config(config)
@@ -97,8 +104,13 @@ class GEORGEHarness:
         if config['classification_config']['reset_model_state']:
             model.load_state_dict(state_dict)
             self.logger.basic_info('Model state reset')
-        dro_dir = self.classify(config['classification_config'], model, dataloaders, 'george',
-                                clusters_path=os.path.join(cluster_dir, 'clusters.pt'))
+        dro_dir = self.classify(
+            config['classification_config'],
+            model,
+            dataloaders,
+            'george',
+            clusters_path=os.path.join(cluster_dir, 'clusters.pt'),
+        )
         outputs.append(dro_dir)
         return outputs
 
@@ -111,26 +123,26 @@ class GEORGEHarness:
             the outputs in a manner that is compatible with GEORGEHarness.cluster).
             For more direct interaction with the classification procedure, see the
             GEORGEClassification class in classification.george_classification.
-        
+
         Args:
-            classification_config(dict): Contains args for the criterion, optimizer, 
+            classification_config(dict): Contains args for the criterion, optimizer,
                 scheduler, metrics. Optional nested `{mode}_config` dictionaries can
                 add and/or replace arguments in classification config.
             model(nn.Module): A PyTorch model.
             dataloaders(Dict[str, DataLoader]): a dictionary mapping a data split
-                to its given DataLoader (note that all data splits in DATA_SPLITS 
+                to its given DataLoader (note that all data splits in DATA_SPLITS
                 must be specified). More information can be found in
                 classification.datasets.
-            mode(str): The type of optimization to run. `erm` trains with vanilla 
+            mode(str): The type of optimization to run. `erm` trains with vanilla
                 Cross Entropy Loss. 'george' trains DRO using given cluster labels.
                 `random_gdro` trains DRO with random cluster labels. `superclass_gdro`
                 trains DRO using the given superclass labels. Implementation of DRO
                 from Sagawa et al. (2020).
-            clusters_path(str, optional): The path leading to clusters.pt file 
+            clusters_path(str, optional): The path leading to clusters.pt file
                 produced by GEORGEHarness.cluster. Only needed if mode == 'george'.
-                
+
         Returns:
-            save_dir(str): The subdirectory within `exp_dir` that contains model 
+            save_dir(str): The subdirectory within `exp_dir` that contains model
                 checkpoints, best model outputs, and best model metrics.
         """
         # overwrite args in classification_config with mode specific params
@@ -149,11 +161,17 @@ class GEORGEHarness:
 
         # (1) train
         trainer = GEORGEClassification(
-            classification_config, save_dir=save_dir, use_cuda=self.use_cuda,
+            classification_config,
+            save_dir=save_dir,
+            use_cuda=self.use_cuda,
             log_format=self.log_format,
-            has_estimated_subclasses=mode not in ['erm', 'true_subclass_gdro'])
-        if not (classification_config['eval_only'] or classification_config['save_act_only']
-                or classification_config['bit_pretrained']):
+            has_estimated_subclasses=mode not in ['erm', 'true_subclass_gdro'],
+        )
+        if not (
+            classification_config['eval_only']
+            or classification_config['save_act_only']
+            or classification_config['bit_pretrained']
+        ):
             trainer.train(model, dataloaders['train'], dataloaders['val'], robust=robust)
 
         # (2) evaluate
@@ -167,10 +185,15 @@ class GEORGEHarness:
                 continue
             self.logger.basic_info(f'Evaluating on {key} split...')
             metrics, outputs = trainer.evaluate(
-                model, dataloaders, split, robust=robust, save_activations=True,
+                model,
+                dataloaders,
+                split,
+                robust=robust,
+                save_activations=True,
                 bit_pretrained=classification_config['bit_pretrained'],
                 adv_metrics=classification_config['eval_only'],
-                ban_reweight=classification_config['ban_reweight'])
+                ban_reweight=classification_config['ban_reweight'],
+            )
             split_to_metrics[key] = metrics
             split_to_outputs[key] = outputs
 
@@ -184,11 +207,13 @@ class GEORGEHarness:
         save_dir = os.path.join(os.path.dirname(inputs_path), f'reduce_{get_unique_str()}')
         self._save_config(save_dir, reduction_config, msg='Saving reduction step config')
         inputs = torch.load(inputs_path)
-        assert len(set(inputs.keys()) & {'train', 'val', 'test'}) == 3, \
-            'Must have ["train", "val", "test"] splits.'
+        assert (
+            len(set(inputs.keys()) & {'train', 'val', 'test'}) == 3
+        ), 'Must have ["train", "val", "test"] splits.'
         for split, split_inputs in inputs.items():
-            assert len(set(split_inputs.keys()) & {'superclass', 'activations'}) == 2, \
-                f'{split} split of loaded inputs must have ["superclass", "activations"] keys'
+            assert (
+                len(set(split_inputs.keys()) & {'superclass', 'activations'}) == 2
+            ), f'{split} split of loaded inputs must have ["superclass", "activations"] keys'
 
         # apply dimensionality reduction (if specified) to the data
         reducer = GEORGEReducer(reduction_config, save_dir=save_dir, log_format=self.log_format)
@@ -206,7 +231,7 @@ class GEORGEHarness:
     def cluster(self, cluster_config, cluster_model, inputs_path):
         """
         Runs clustering stage of the GEORGE pipeline.
-        
+
         Note:
             The `inputs_path` parameter must describe a pickle-serialized dictionary
             that has the following schema:
@@ -220,7 +245,7 @@ class GEORGEHarness:
                     'targets': np.ndarray of shape (N, ),
                     'probs': np.ndarray of shape (N, ),
                     'preds': np.ndarray of shape (N, ),
-                    'losses': np.ndarray of shape (N, ), 
+                    'losses': np.ndarray of shape (N, ),
                 },
                 'val': {...},
                 'test': {...}
@@ -228,16 +253,16 @@ class GEORGEHarness:
             Future work is to further modularize the cluster code to mitigate
             dependencies on this object. For best results, train classifiers
             using GEORGEHarness.classify.
-            
+
         Args:
             cluster_config(dict): contains args for the clustering step.
             cluster_model(Any): a clustering model. Must implement `fit` and `predict`
                 methods. For more details, see cluster.george_cluster.
-            inputs_path (str) path leading to outputs.pt file produced by 
+            inputs_path (str) path leading to outputs.pt file produced by
                 GEORGEHarness.classify.
             reduction_model(Any): a dimensionality reduction model. Must implement
                 `fit` and `transform`. For more details, see cluster.george_cluster.
-                
+
         Returns:
             save_dir(str). subdirectory within `exp_dir` that contains the cluster
                 assignments, other cluster output, and cluster metrics.
@@ -245,13 +270,15 @@ class GEORGEHarness:
         save_dir = os.path.join(os.path.dirname(inputs_path), f'cluster_{get_unique_str()}')
         self._save_config(save_dir, cluster_config, msg='Saving cluster step config')
         inputs = torch.load(inputs_path)
-        assert len(set(inputs.keys()) & {'train', 'val', 'test'}) == 3, \
-            'Must have ["train", "val", "test"] splits.'
+        assert (
+            len(set(inputs.keys()) & {'train', 'val', 'test'}) == 3
+        ), 'Must have ["train", "val", "test"] splits.'
         for split, split_inputs in inputs.items():
             for group, group_data in split_inputs[0].items():
-                assert len(set(group_data.keys()) & {'activations', 'losses'}) == 2, \
-                    f'{split} split of loaded inputs must have ["activations", "losses"] keys' \
-                     ' for each superclass'
+                assert len(set(group_data.keys()) & {'activations', 'losses'}) == 2, (
+                    f'{split} split of loaded inputs must have ["activations", "losses"] keys'
+                    ' for each superclass'
+                )
 
         # (1) train
         c_trainer = GEORGECluster(cluster_config, save_dir=save_dir, log_format=self.log_format)
@@ -284,18 +311,20 @@ class GEORGEHarness:
             return True
         elif mode == 'erm':
             return False
-        raise ValueError('mode {mode} not valid. Use one of the following:\n' +
-                         '["george", "random_gdro", "superclass_gdro", "true_subclass_gdro", ' +
-                         '"erm"]')
+        raise ValueError(
+            'mode {mode} not valid. Use one of the following:\n'
+            + '["george", "random_gdro", "superclass_gdro", "true_subclass_gdro", '
+            + '"erm"]'
+        )
 
     def get_dataloaders(self, config, mode='erm', transforms=None, subclass_labels=None):
         dataset_name = config['dataset']
         seed = config['seed']
         config = config['classification_config']
         if mode == 'george':
-            assert ('.pt' in subclass_labels)  # file path to subclass labels specified
+            assert '.pt' in subclass_labels  # file path to subclass labels specified
         elif mode != 'erm':
-            assert (subclass_labels is None)
+            assert subclass_labels is None
             subclass_labels = mode.rstrip('_gdro')
 
         if subclass_labels is None:
@@ -319,7 +348,7 @@ class GEORGEHarness:
             'celeba': CelebADataset,
             'isic': ISICDataset,
             'mnist': MNISTDataset,
-            'waterbirds': WaterbirdsDataset
+            'waterbirds': WaterbirdsDataset,
         }
         dataset_class = d[dataset_name]
         batch_size = config['batch_size']
@@ -330,15 +359,22 @@ class GEORGEHarness:
             split_subclass_labels = subclass_labels[key]
             shared_dl_args = {'batch_size': batch_size, 'num_workers': config['workers']}
             if split == 'train':
-                dataset = dataset_class(root='./data', split=split, download=True, augment=True,
-                                        **config['dataset_config'])
+                dataset = dataset_class(
+                    root='./data',
+                    split=split,
+                    download=True,
+                    augment=True,
+                    **config['dataset_config'],
+                )
                 dataset.add_subclass_labels(split_subclass_labels, seed=seed)
                 if config.get('uniform_group_sampling', False):
                     sampler, group_weights = self._get_uniform_group_sampler(dataset)
                     self.logger.info(
-                        f'Resampling training data with subclass weights:\n{group_weights}')
-                    dataloaders[split] = DataLoader(dataset, **shared_dl_args, shuffle=False,
-                                                    sampler=sampler)
+                        f'Resampling training data with subclass weights:\n{group_weights}'
+                    )
+                    dataloaders[split] = DataLoader(
+                        dataset, **shared_dl_args, shuffle=False, sampler=sampler
+                    )
                 else:
                     dataloaders[split] = DataLoader(dataset, **shared_dl_args, shuffle=True)
             else:
@@ -356,7 +392,8 @@ class GEORGEHarness:
 
     def _get_uniform_group_sampler(self, dataset):
         group_counts, group_labels = dataset.get_class_counts('subclass'), dataset.get_labels(
-            'subclass')
+            'subclass'
+        )
         group_weights = np.array([len(dataset) / c if c != 0 else 0 for c in group_counts])
         group_weights /= np.sum(group_weights)
         weights = group_weights[np.array(group_labels)]
@@ -391,16 +428,18 @@ class GEORGEHarness:
             'none': NoOpReducer,
             'pca': PCAReducer,
             'umap': UMAPReducer,
-            'hardness': HardnessAugmentedReducer
+            'hardness': HardnessAugmentedReducer,
         }
         if red_config['model'] != 'hardness':
             reduction_cls = models[red_config['model']]
-            reduction_model = reduction_cls(random_state=config['seed'],
-                                            n_components=red_config['components'])
+            reduction_model = reduction_cls(
+                random_state=config['seed'], n_components=red_config['components']
+            )
         else:
-            assert (nn_model is not None)
-            base_reduction_model = UMAPReducer(random_state=config['seed'],
-                                               n_components=red_config['components'])
+            assert nn_model is not None
+            base_reduction_model = UMAPReducer(
+                random_state=config['seed'], n_components=red_config['components']
+            )
             reduction_model = HardnessAugmentedReducer(nn_model, base_reduction_model)
         return reduction_model
 
@@ -412,7 +451,7 @@ class GEORGEHarness:
             'max_k': cluster_config['k'],
             'seed': config['seed'],
             'sil_cuda': cluster_config['sil_cuda'],
-            'search': cluster_config['search_k']
+            'search': cluster_config['search_k'],
         }
         if cluster_config['overcluster']:
             cluster_model = OverclusterModel(**kwargs, oc_fac=cluster_config['overcluster_factor'])
@@ -425,11 +464,14 @@ class GEORGEHarness:
         for split, outputs in split_to_outputs.items():
             visualization_dir = os.path.join(save_dir, 'visualizations', split)
             os.makedirs(visualization_dir, exist_ok=True)
-            visualize_clusters_by_group(outputs['activations'],
-                                        cluster_assignments=outputs['assignments'],
-                                        group_assignments=inputs[split][1],
-                                        true_subclass_labels=outputs['true_subclass'],
-                                        group_to_k=group_to_k, save_dir=visualization_dir)
+            visualize_clusters_by_group(
+                outputs['activations'],
+                cluster_assignments=outputs['assignments'],
+                group_assignments=inputs[split][1],
+                true_subclass_labels=outputs['true_subclass'],
+                group_to_k=group_to_k,
+                save_dir=visualization_dir,
+            )
 
     def _save_config(self, save_dir, config, msg=None):
         """Helper function to save `config` in `save_dir`."""

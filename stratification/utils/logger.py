@@ -1,8 +1,9 @@
-import os
-import sys
-import logging
 from collections import defaultdict
 from datetime import datetime
+import logging
+import os
+import sys
+
 import pandas as pd
 
 from .utils import flatten_dict
@@ -10,6 +11,7 @@ from .utils import flatten_dict
 
 class EpochCSVLogger:
     '''Save training process without relying on fixed column names'''
+
     def __init__(self, fpath, title=None, resume=False):
         self.fpath = fpath
         self.metrics_dict = {}
@@ -46,6 +48,7 @@ class SimpleLogger:
 
 class FullLogger:
     '''Wrapper class for Python logger'''
+
     def __init__(self, logger):
         self.type = 'full'
         self.logger = logger

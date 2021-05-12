@@ -1,9 +1,9 @@
-import itertools
-import os
-import logging
 from collections import Counter
-from PIL import Image
+import itertools
+import logging
+import os
 
+from PIL import Image
 import numpy as np
 import pandas as pd
 import torch
@@ -13,8 +13,7 @@ from stratification.classification.datasets.base import GEORGEDataset
 
 
 class WaterbirdsDataset(GEORGEDataset):
-    """Waterbirds Dataset
-    """
+    """Waterbirds Dataset"""
 
     _channels = 3
     _resolution = 224
@@ -23,12 +22,14 @@ class WaterbirdsDataset(GEORGEDataset):
     _df_attr_keys = ['y', 'place']
     split_dict = {'train': 0, 'val': 1, 'test': 2}
 
-    def __init__(self, root, split, transform=None, download=False, ontology='default',
-                 augment=False):
-        assert (transform is None)
+    def __init__(
+        self, root, split, transform=None, download=False, ontology='default', augment=False
+    ):
+        assert transform is None
         transform = get_transform_cub()
-        super().__init__('waterbirds', root, split, transform=transform, download=download,
-                         ontology=ontology)
+        super().__init__(
+            'waterbirds', root, split, transform=transform, download=download, ontology=ontology
+        )
 
     @property
     def processed_folder(self):
@@ -63,28 +64,34 @@ class WaterbirdsDataset(GEORGEDataset):
         logging.info(self._df_attr_keys)
         logging.info('--')
         logging.info(f'Original label counts ({self.split} split):')
-        logging.info('\n'.join([
-            f'idx: {class_idx},\t count: {class_count},\t '
-            f'attrs:{class_idx_to_class_attrs[class_idx]}'
-            for class_idx, class_count in sorted(Counter(original_labels).items())
-        ]))
+        logging.info(
+            '\n'.join(
+                [
+                    f'idx: {class_idx},\t count: {class_count},\t '
+                    f'attrs:{class_idx_to_class_attrs[class_idx]}'
+                    for class_idx, class_count in sorted(Counter(original_labels).items())
+                ]
+            )
+        )
         logging.info('--')
         superclass_labels, self.superclass_names = self._get_superclass_labels_from_id(
-            original_labels, class_idx_to_class_attrs)
+            original_labels, class_idx_to_class_attrs
+        )
         true_subclass_labels, self.true_subclass_names = self._get_true_subclass_labels_from_id(
-            original_labels, class_idx_to_class_attrs)
+            original_labels, class_idx_to_class_attrs
+        )
         X = image_names
         Y_dict = {
             'superclass': torch.from_numpy(superclass_labels),
             'true_subclass': torch.from_numpy(true_subclass_labels),
-            'original': torch.from_numpy(original_labels)
+            'original': torch.from_numpy(original_labels),
         }
         return X, Y_dict
 
     def _get_data(self, class_attrs_to_class_idx):
         """
         Iterates through the DataFrame to extract the image name and label.
-        
+
         The subclass labels are automatically assigned based on the row's attributes.
         """
         image_names = []
@@ -104,7 +111,7 @@ class WaterbirdsDataset(GEORGEDataset):
 
     def _get_class_attrs_to_class_idx(self):
         """Uses self._df_attr_keys to identify all possible subclasses.
-        
+
         Subclass labels (class_idx) are mapped to a tuple of sample attributes (class_attrs).
         """
         df_attr_uniques = []
@@ -116,8 +123,8 @@ class WaterbirdsDataset(GEORGEDataset):
 
     def _get_superclass_labels_from_id(self, original_labels, class_idx_to_class_attrs):
         """Superclass labels are determined from the original_labels by the given ontology.
-        
-        The default """
+
+        The default"""
         superclass_labels = []
         if self.ontology == 'default':
             y_attr_idx = self._df_attr_keys.index('y')
@@ -129,7 +136,8 @@ class WaterbirdsDataset(GEORGEDataset):
                     superclass_label = 1
                 else:
                     raise ValueError(
-                        f'Unrecognized class attributes {class_attrs} for label {label}')
+                        f'Unrecognized class attributes {class_attrs} for label {label}'
+                    )
                 superclass_labels.append(superclass_label)
             superclass_names = ['LANDBIRD', 'WATERBIRD']
         else:
@@ -154,10 +162,14 @@ class WaterbirdsDataset(GEORGEDataset):
                     true_subclass_label = 3
                 else:
                     raise ValueError(
-                        f'Unrecognized class attributes {class_attrs} for label {label}')
+                        f'Unrecognized class attributes {class_attrs} for label {label}'
+                    )
                 true_subclass_labels.append(true_subclass_label)
             true_subclass_names = [
-                'LANDBIRD on land', 'LANDBIRD on water', 'WATERBIRD on land', 'WATERBIRD on water'
+                'LANDBIRD on land',
+                'LANDBIRD on water',
+                'WATERBIRD on land',
+                'WATERBIRD on water',
             ]
         else:
             raise ValueError(f'subclass id {self.ontology} not recognized.')
@@ -185,10 +197,12 @@ class WaterbirdsDataset(GEORGEDataset):
 def get_transform_cub():
     target_resolution = (224, 224)
 
-    transform = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.CenterCrop(target_resolution),
-        transforms.ToTensor(),
-        transforms.Normalize(**WaterbirdsDataset._normalization_stats),
-    ])
+    transform = transforms.Compose(
+        [
+            transforms.Resize((256, 256)),
+            transforms.CenterCrop(target_resolution),
+            transforms.ToTensor(),
+            transforms.Normalize(**WaterbirdsDataset._normalization_stats),
+        ]
+    )
     return transform

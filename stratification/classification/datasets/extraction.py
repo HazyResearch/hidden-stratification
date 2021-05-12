@@ -1,8 +1,9 @@
+from typing import Tuple, Union
+
+from ethicml.vision.data.image_dataset import TorchImageDataset
 import torch
 from torch import Tensor
-from typing import Union, Tuple
-from ethicml.vision.data.image_dataset import TorchImageDataset
-from torch.utils.data import ConcatDataset, Subset, Dataset
+from torch.utils.data import ConcatDataset, Dataset, Subset
 
 from shared.data.dataset_wrappers import DataTupleDataset, TensorDataTupleDataset
 from shared.data.isic import IsicDataset

@@ -2,7 +2,7 @@
 from __future__ import annotations
 import logging
 from pathlib import Path
-from typing import Any, Dict, NamedTuple, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, NamedTuple, Optional
 
 import torch
 

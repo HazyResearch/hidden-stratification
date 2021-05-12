@@ -1,8 +1,9 @@
+import warnings
+
 from numba.core.errors import NumbaWarning
 import numpy as np
 from sklearn.decomposition import PCA
 from umap import UMAP
-import warnings
 
 __all__ = ['HardnessAugmentedReducer', 'NoOpReducer', 'PCAReducer', 'UMAPReducer']
 
@@ -25,6 +26,7 @@ class NoOpReducer(Reducer):
     """
     A no-op reduction method. Used when making changes using raw features.
     """
+
     def __init__(self, n_components=1, **kwargs):
         self.n_components = n_components
 
@@ -42,6 +44,7 @@ class PCAReducer(Reducer):
     """
     Simple wrapper for PCA.
     """
+
     def __init__(self, n_components=2, **kwargs):
         self.n_components = n_components
         self.model = PCA(n_components=n_components)
@@ -62,9 +65,10 @@ class UMAPReducer(Reducer):
     """
     Simple wrapper for UMAP, used for API consistency.
     """
+
     def __init__(self, n_components=2, **kwargs):
         self.n_components = n_components
-        kwargs = {**{'n_neighbors': 10, 'min_dist': 0.}, **kwargs}
+        kwargs = {**{'n_neighbors': 10, 'min_dist': 0.0}, **kwargs}
         self.model = UMAP(n_components=n_components, **kwargs)
 
     def fit(self, X):
@@ -91,6 +95,7 @@ class HardnessAugmentedReducer(Reducer):
     Optionally takes in another reducer, whose components are appended to
     this hardness component (possibly with different weights).
     """
+
     def __init__(self, nn_model, base_reducer=None, hc_weight=1):
         if base_reducer is not None:
             base_reducer.decrement_components()
@@ -105,7 +110,8 @@ class HardnessAugmentedReducer(Reducer):
     def fit(self, X):
         hardness_scores = np.dot(X, self.decision_bdy)
         X = X - np.outer(hardness_scores, self.decision_bdy)
-        if self.base_reducer: self.base_reducer.fit(X)
+        if self.base_reducer:
+            self.base_reducer.fit(X)
         return self
 
     def transform(self, X):
