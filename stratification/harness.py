@@ -323,10 +323,17 @@ class GEORGEHarness:
         )
 
     def get_dataloaders(
-        self, config: Dict[str, Any], data_config: BaseConfig, use_cuda: bool, mode="erm", subclass_labels: Optional[str] = None
+        self,
+        config: Dict[str, Any],
+        data_config: BaseConfig,
+        use_cuda: bool,
+        mode="erm",
+        subclass_labels: Optional[str] = None,
     ):
         train_config = config["classification_config"]
-        device = torch.device(f"cuda:{torch.cuda.current_device()}") if use_cuda else torch.device("cpu")
+        device = (
+            torch.device(f"cuda:{torch.cuda.current_device()}") if use_cuda else torch.device("cpu")
+        )
         if mode == "erm":
             mode_config = train_config["erm_config"]
         else:
@@ -436,7 +443,8 @@ class GEORGEHarness:
                 model_cls = models[cl_config['model']]
             except KeyError:
                 raise ValueError('Unsupported model architecture')
-        model = model_cls(num_classes=num_classes)
+        out_dim = num_classes if num_classes > 2 else 1
+        model = model_cls(num_classes=out_dim)
         if self.use_cuda:
             model = torch.nn.DataParallel(model).cuda()
         self.logger.info('Model:')
