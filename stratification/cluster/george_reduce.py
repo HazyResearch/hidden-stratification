@@ -103,7 +103,7 @@ class GEORGEReducer:
 
         group_assignments = inputs_tr['superclass']
         group_to_data = self._group(inputs_tr, group_assignments)
-        groups = np.unique(group_assignments)
+        groups = np.unique(group_assignments).int()
 
         group_to_models = []
         for group in groups:
@@ -146,7 +146,7 @@ class GEORGEReducer:
             assert train_means is not None
         group_assignments = split_inputs['superclass']
         group_to_data = self._group(split_inputs, group_assignments)
-        groups = np.unique(group_assignments)
+        groups = np.unique(group_assignments).int()
         assert len(group_to_models) <= len(
             groups
         ), 'There must be a model for each group in the input data.'
@@ -193,7 +193,7 @@ class GEORGEReducer:
                 Note that the grouped data is still in the same order as it
                 was before partitioning.
         """
-        groups = np.unique(group_assignments)
+        groups = np.unique(group_assignments).int()
         group_to_data = defaultdict(dict)
         for group in groups:
             for k, v in data.items():
