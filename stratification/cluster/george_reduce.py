@@ -193,7 +193,7 @@ class GEORGEReducer:
                 Note that the grouped data is still in the same order as it
                 was before partitioning.
         """
-        groups = np.unique(group_assignments).int()
+        groups = np.unique(group_assignments).astype(np.int64)
         group_to_data = defaultdict(dict)
         for group in groups:
             for k, v in data.items():
