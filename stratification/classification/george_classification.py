@@ -378,7 +378,7 @@ class GEORGEClassification:
             if optimize and not bit_pretrained:
                 logits = model(inputs)
                 loss_targets = targets['superclass']
-                co = self.criterion(logits, loss_targets, targets['subclass'])
+                co = self.criterion(logits, loss_targets, targets['subclass'].long())
                 loss, (losses, corrects), _ = co
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -398,7 +398,7 @@ class GEORGEClassification:
                             )
                             bar.next()
                         continue
-                    co = self.criterion(logits, loss_targets, targets['subclass'])
+                    co = self.criterion(logits, loss_targets, targets['subclass'].long())
                     loss, (losses, corrects), _ = co
 
             if not save_activations:
