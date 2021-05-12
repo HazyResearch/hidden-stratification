@@ -157,7 +157,7 @@ class GEORGEReducer:
             group_data = group_to_data[int(group)]
             group_outputs = group_data.copy()
             del group_outputs['superclass']  # unneeded, as all are superclass "group"
-            reduction_model = group_to_models[group]
+            reduction_model = group_to_models[int(group)]
 
             # reduce
             activations = group_data['activations']
@@ -170,7 +170,7 @@ class GEORGEReducer:
             activations = activations.astype(acts_dtype)
             group_outputs['activations'] = activations
 
-            group_to_outputs[group] = group_outputs
+            group_to_outputs[int(group)] = group_outputs
 
         return group_to_outputs
 
@@ -201,5 +201,5 @@ class GEORGEReducer:
                     assert len(group_assignments) == len(
                         v
                     ), f'group_assignments and "{k}" must be the same length'
-                    group_to_data[int(group)][k] = v[group_assignments == group]
+                    group_to_data[int(group)][k] = v[group_assignments == int(group)]
         return group_to_data
