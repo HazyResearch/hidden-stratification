@@ -103,11 +103,11 @@ class GEORGEReducer:
 
         group_assignments = inputs_tr['superclass']
         group_to_data = self._group(inputs_tr, group_assignments)
-        groups = np.unique(group_assignments).astype(np.int64)
+        groups = np.unique(group_assignments)
 
         group_to_models = []
         for group in groups:
-            group_data = group_to_data[group]
+            group_data = group_to_data[int(group)]
             reduction_model = deepcopy(orig_reduc_model)
 
             # reduce
@@ -146,7 +146,7 @@ class GEORGEReducer:
             assert train_means is not None
         group_assignments = split_inputs['superclass']
         group_to_data = self._group(split_inputs, group_assignments)
-        groups = np.unique(group_assignments).astype(np.int64)
+        groups = np.unique(group_assignments)
         assert len(group_to_models) <= len(
             groups
         ), 'There must be a model for each group in the input data.'
@@ -154,7 +154,7 @@ class GEORGEReducer:
         group_to_outputs = {}
         for group in groups:
             self.logger.info(f'Reducing group {group}...')
-            group_data = group_to_data[group]
+            group_data = group_to_data[int(group)]
             group_outputs = group_data.copy()
             del group_outputs['superclass']  # unneeded, as all are superclass "group"
             reduction_model = group_to_models[group]
@@ -193,7 +193,7 @@ class GEORGEReducer:
                 Note that the grouped data is still in the same order as it
                 was before partitioning.
         """
-        groups = np.unique(group_assignments).astype(np.int64)
+        groups = np.unique(group_assignments)
         group_to_data = defaultdict(dict)
         for group in groups:
             for k, v in data.items():
@@ -201,5 +201,5 @@ class GEORGEReducer:
                     assert len(group_assignments) == len(
                         v
                     ), f'group_assignments and "{k}" must be the same length'
-                    group_to_data[group][k] = v[group_assignments == group]
+                    group_to_data[int(group)][k] = v[group_assignments == group]
         return group_to_data
