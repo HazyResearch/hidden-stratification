@@ -136,7 +136,7 @@ class GEORGEDataset(Dataset):
         self._subclass_labels_added = True
 
     def get_num_classes(self, key):
-        return torch.max(self.Y_dict[key]).item() + 1
+        return int(torch.max(self.Y_dict[key]).item() + 1)
 
     def get_labels(self, key):
         return self.Y_dict[key]
