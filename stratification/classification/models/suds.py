@@ -8,6 +8,7 @@ __all__ = ["Mp64x64Net"]
 
 class Mp64x64Net(nn.Module):
     def __init__(self, num_classes: int, batch_norm: bool = True):
+        super().__init__()
         self.batch_norm = batch_norm
 
         layers = []
