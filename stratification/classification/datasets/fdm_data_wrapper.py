@@ -44,7 +44,7 @@ class FdmDatasetWrapper(GEORGEDataset):
             dataset = self.triplet.test
         # 4. step: extract labels
         s, y = extract_labels_from_dataset(dataset)
-        y_dict = {"superclass": y, "true_subclass": s}
+        y_dict = {"superclass": y.flatten(), "true_subclass": s.flatten()}
         return dataset, y_dict
 
     def __getitem__(self, idx: int):
