@@ -55,8 +55,9 @@
             "mean_loss",
             "composition"
         ],
-        "search_k": true,
-        "overcluster": true,
+        "search_k": false,
+        "max_k": 4,
+        "overcluster": false,
         "sil_cuda": true
     }
 }
