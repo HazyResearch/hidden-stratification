@@ -185,7 +185,7 @@ def load_dataset(cfg: BaseConfig) -> DatasetTriplet:
 
     elif isinstance(args, (CelebaConfig, IsicConfig)):
         if isinstance(args, CelebaConfig):
-            tform_ls = [TF.Resize(64), TF.CenterCrop(64)]
+            tform_ls = [TF.CenterCrop(178), TF.Resize(64)]
         else:
             tform_ls = []
         tform_ls.append(TF.ToTensor())
