@@ -8,6 +8,7 @@ joblib
 jsonargparse
 jsonschema
 jupyterlab
+lapjv
 matplotlib
 numba>=0.50
 numpy
