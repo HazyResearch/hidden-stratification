@@ -5,6 +5,7 @@
     "data_config": "celeba/gender_smiling",
     "mode": "george",
     "seed": 0,
+    "log_offline": false,
     "allow_multigpu": true,
     "classification_config": {
         "model": "mp64x64",
