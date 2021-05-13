@@ -63,11 +63,11 @@ def extract_labels_from_dataset(dataset: ExtractableDataset) -> Tuple[Tensor, Te
     elif isinstance(dataset, TrainContextWrapper):
         s_all_ls, y_all_ls = [], []
         s, y = _extract(dataset.train)
-        s_all_ls.append(s)
-        y_all_ls.append(y)
+        s_all_ls.append(s.squeeze(1))
+        y_all_ls.append(y.squeeze(1))
         s, _ = _extract(dataset.context)
-        s_all_ls.append(s)
-        y_all_ls.append(dataset.new_context_labels)
+        s_all_ls.append(s.squeeze(1))
+        y_all_ls.append(dataset.new_context_labels.squeeze(1))
         s_all = torch.cat(s_all_ls, dim=0)
         y_all = torch.cat(y_all_ls, dim=0)
     else:
