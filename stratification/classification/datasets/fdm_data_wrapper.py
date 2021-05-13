@@ -1,9 +1,10 @@
 from typing import Dict, Tuple
+from typing_extensions import Literal
 
 import torch
 from torch import Tensor
 from torch.utils.data import DataLoader, Dataset
-from typing_extensions import Literal
+import wandb
 
 from fdm.models import Classifier
 from shared.configs import BaseConfig
@@ -80,5 +81,6 @@ def train_and_predict(cfg: BaseConfig, dataset_triplet: DatasetTriplet, device: 
         device=device,
     )
 
-    preds, _, _ = clf.predict_dataset(test_loader, device=device)
+    preds, actual, _ = clf.predict_dataset(test_loader, device=device)
+    wandb.log({"context.acc": (preds == actual).float().mean()})
     return TrainContextWrapper(train_data, context=test_data, new_context_labels=preds)
