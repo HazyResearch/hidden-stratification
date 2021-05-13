@@ -54,7 +54,7 @@
             "acc"
         ],
         "search_k": false,
-        "overcluster": false,
+        "overcluster": true,
         "max_k": 4
     }
 }
