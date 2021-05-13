@@ -242,7 +242,7 @@ class FcNet:
 
 
 class Mp64x64Net:
-    def __init__(self, batch_norm: bool):
+    def __init__(self, batch_norm: bool = True):
         self.batch_norm = batch_norm
 
     def _conv_block(

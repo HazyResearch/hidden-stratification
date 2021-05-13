@@ -438,7 +438,12 @@ class GEORGEHarness:
         if cl_config['bit_pretrained']:
             model_cls = BiTResNet
         else:
-            models = {'lenet4': LeNet4, 'resnet50': PyTorchResNet, 'shallow_cnn': ShallowCNN}
+            models = {
+                'lenet4': LeNet4,
+                'resnet50': PyTorchResNet,
+                'shallow_cnn': ShallowCNN,
+                "mp64x64": Mp64x64Net,
+            }
             try:
                 model_cls = models[cl_config['model']]
             except KeyError:

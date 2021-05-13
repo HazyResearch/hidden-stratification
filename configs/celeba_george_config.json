@@ -7,7 +7,7 @@
     "seed": 0,
     "allow_multigpu": true,
     "classification_config": {
-        "model": "resnet50",
+        "model": "mp64x64",
         "checkpoint_metric": "val_acc",
         "bit_pretrained": true,
         "optimizer_config": {

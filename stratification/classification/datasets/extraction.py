@@ -1,4 +1,4 @@
-from typing import Tuple, Union
+from typing import Tuple, Union, cast
 
 from ethicml.vision.data.image_dataset import TorchImageDataset
 import torch
@@ -27,8 +27,9 @@ class TrainContextWrapper(Dataset):
         if index < self.train_length:
             return self.train[index]
         else:
-            x, s, _ = self.context[index - self.train_length]
-            pred_y = self.new_context_labels[index - self.train_length]
+            rel_index = index - self.train_length
+            x, s, _ = self.context[rel_index]
+            pred_y = self.new_context_labels[rel_index]
             return x, s, pred_y
 
 
