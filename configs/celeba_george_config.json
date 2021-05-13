@@ -57,7 +57,7 @@
             "acc"
         ],
         "search_k": false,
-        "max_k": 4,
+        "max_k": 2,
         "overcluster": true,
         "sil_cuda": true
     }

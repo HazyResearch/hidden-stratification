@@ -55,6 +55,6 @@
         ],
         "search_k": false,
         "overcluster": true,
-        "max_k": 4
+        "max_k": 2
     }
 }
