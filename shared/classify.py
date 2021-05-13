@@ -19,12 +19,10 @@ def fit_classifier(
     train_data: DataLoader,
     target_dim: int,
     device: torch.device,
-    lr: float,
-    epochs: int,
     **train_data_kwargs: dict[str, Any],
 ) -> Classifier:
     input_dim = input_shape[0]
-    optimizer_kwargs = {"lr": lr}
+    optimizer_kwargs = {"lr": data_config.lr}
     clf_fn: ModelFn
 
     if isinstance(data_config.data, ImageDatasetConfig):
@@ -59,7 +57,7 @@ def fit_classifier(
     clf.fit(
         train_data,
         test_data=None,
-        epochs=epochs,
+        epochs=data_config.epochs,
         device=device,
         pred_s=False,
         **train_data_kwargs,
