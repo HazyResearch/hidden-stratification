@@ -130,6 +130,7 @@ class BaseConfig:
     epochs: int = 40
     batch_size: int = 256
     test_batch_size: int = 1000
+    num_workers: int = 8
 
     @classmethod
     def from_hydra(cls: Type[T], hydra_config: DictConfig) -> T:

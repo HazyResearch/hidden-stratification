@@ -1,4 +1,5 @@
-from typing import Dict, Tuple
+from __future__ import annotations
+from typing import Any, Dict, Tuple
 from typing_extensions import Literal
 
 import torch
@@ -52,22 +53,28 @@ class FdmDatasetWrapper(GEORGEDataset):
         return x, y_dict
 
 
-def train_and_predict(cfg: BaseConfig, dataset_triplet: DatasetTriplet, device: torch.device):
+def train_and_predict(
+    cfg: BaseConfig,
+    dataset_triplet: DatasetTriplet,
+    device: torch.device,
+):
     train_data, test_data = dataset_triplet.train, dataset_triplet.context
     y_dim = dataset_triplet.y_dim
     input_shape = next(iter(train_data))[0].shape
-
-    train_loader_kwargs = {}
-    train_loader_kwargs["shuffle"] = True
 
     train_loader = DataLoader(
         train_data,
         batch_size=cfg.batch_size,
         pin_memory=True,
-        **train_loader_kwargs,
+        shuffle=True,
+        num_workers=cfg.num_workers,
     )
     test_loader = DataLoader(
-        test_data, batch_size=cfg.test_batch_size, shuffle=False, pin_memory=True
+        test_data,
+        batch_size=cfg.test_batch_size,
+        shuffle=False,
+        pin_memory=True,
+        num_workers=cfg.num_workers,
     )
 
     clf: Classifier = fit_classifier(

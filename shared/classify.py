@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Sequence
+from typing import Any, Sequence
 
 import torch
 import torch.nn as nn
@@ -10,7 +10,7 @@ from torchvision.models.resnet import ResNet
 from shared.configs import BaseConfig, CelebaConfig, CmnistConfig, ImageDatasetConfig
 from shared.configs.classifiers import FcNet, Mp32x23Net, Mp64x64Net
 from shared.models import Classifier
-from shared.utils import ModelFn, compute_metrics, make_tuple_from_data, prod
+from shared.utils import ModelFn
 
 
 def fit_classifier(
@@ -21,6 +21,7 @@ def fit_classifier(
     device: torch.device,
     lr: float,
     epochs: int,
+    **train_data_kwargs: dict[str, Any],
 ) -> Classifier:
     input_dim = input_shape[0]
     optimizer_kwargs = {"lr": lr}
@@ -61,6 +62,7 @@ def fit_classifier(
         epochs=epochs,
         device=device,
         pred_s=False,
+        **train_data_kwargs,
     )
 
     return clf

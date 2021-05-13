@@ -4,3 +4,6 @@ defaults:
   - bias: cmnist/no_bias
 
 epochs: 1
+num_workers: 8
+batch_size: 256
+test_batch_size: 256
