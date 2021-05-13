@@ -1,14 +1,14 @@
 from collections import defaultdict
 from copy import deepcopy
-import json
 import logging
 import os
 
 import numpy as np
-import torch
+from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
 
 from stratification.cluster.models.cluster import DummyClusterer
 from stratification.cluster.utils import (
+    compute_optimal_assignments,
     get_cluster_composition,
     get_cluster_mean_loss,
     get_k_from_model,
@@ -47,14 +47,34 @@ class GEORGECluster:
                 Can be per-cluster metrics or aggregate metrics.
         """
         metrics = {}
-        for metric_type in self.config['metric_types']:
-            if metric_type == 'mean_loss':
-                metric = get_cluster_mean_loss(inputs['losses'], assignments)
-            elif metric_type == 'composition':
-                metric = get_cluster_composition(inputs['true_subclass'], assignments)
+        for metric_type in self.config["metric_types"]:
+            if metric_type == "mean_loss":
+                metrics[metric_type] = get_cluster_mean_loss(inputs["losses"], assignments)
+            elif metric_type == "composition":
+                metrics[metric_type] = get_cluster_composition(inputs["true_subclass"], assignments)
+            elif metric_type == "nmi":
+                metrics[metric_type] = normalized_mutual_info_score(
+                    labels_true=inputs["true_subclass"], labels_pred=assignments  # type: ignore
+                )
+            elif metric_type == "ari":
+                metrics[metric_type] = adjusted_rand_score(
+                    labels_true=inputs["true_subclass"], labels_pred=assignments
+                )
+            elif metric_type == "acc":
+                labels_true = inputs["true_subclass"]
+                total_acc, cluster_map = compute_optimal_assignments(
+                    labels_true=labels_true, labels_pred=assignments
+                )
+                metrics["acc"] = total_acc
+                for i, (class_id, cluster_id) in enumerate(cluster_map.items()):
+                    class_mask = labels_true == class_id
+                    subgroup_acc = (
+                        class_mask & (assignments == cluster_id)
+                    ).sum() / class_mask.sum()
+                    metrics[f"{i}.acc"] = subgroup_acc
+
             else:
-                raise KeyError(f'Unrecognized metric_type {metric_type}')
-            metrics[metric_type] = metric
+                raise KeyError(f"Unrecognized metric_type {metric_type}")
         return metrics
 
     def train(self, cluster_model, inputs):

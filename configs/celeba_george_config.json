@@ -52,8 +52,9 @@
     "cluster_config": {
         "model": "kmeans",
         "metric_types": [
-            "mean_loss",
-            "composition"
+            "ari",
+            "nmi",
+            "acc"
         ],
         "search_k": false,
         "max_k": 4,

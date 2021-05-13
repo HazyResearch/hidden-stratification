@@ -49,8 +49,9 @@
     "cluster_config": {
         "model": "gmm",
         "metric_types": [
-            "mean_loss",
-            "composition"
+            "ari",
+            "nmi",
+            "acc"
         ],
         "search_k": false,
         "overcluster": false,
