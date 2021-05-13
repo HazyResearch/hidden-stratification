@@ -138,9 +138,14 @@ class BaseConfig:
 
         This is necessary because dataclasses cannot be instantiated recursively yet.
         """
-        subconfigs = {k: instantiate(hydra_config[k]) for k in ["data", "bias"]}
+        attrs = {}
+        for k in hydra_config.keys():
+            if k in ("data", "bias"):
+                attrs[k] = instantiate(hydra_config[k])
+            else:
+                attrs[k] = hydra_config[k]
 
-        return cls(**subconfigs)
+        return cls(**attrs)
 
 
 def register_configs() -> None:

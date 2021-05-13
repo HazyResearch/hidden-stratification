@@ -18,12 +18,12 @@ register_configs()
 def main() -> None:
     config = get_config()
     with initialize(config_path="../configs"):
-        cfg = compose(
+        hydra_config = compose(
             config_name="biased_data",
             overrides=[f"data={config['data_config']}", f"bias={config['bias_config']}"],
         )
-        print(cfg)
-        biased_data_config = BaseConfig.from_hydra(cfg)
+        print(hydra_config)
+        biased_data_config = BaseConfig.from_hydra(hydra_config)
 
     use_cuda = config['use_cuda'] and torch.cuda.is_available()
     set_seed(config['seed'], use_cuda)  # set seeds for reproducibility
