@@ -1,5 +1,7 @@
 cmake
+ethicml
 gdown
+hydra-core>=1.1.0.dev7
 ipykernel
 ipywidgets
 joblib
