@@ -36,15 +36,11 @@ def make_tuple_from_data(
 
 
 def compute_metrics(
-    cfg: BaseConfig,
     predictions: em.Prediction,
     actual: em.DataTuple,
-    model_name: str,
-    step: int,
     s_dim: int,
-    exp_name: str | None = None,
+    step: int | None = None,
     save_summary: bool = False,
-    use_wandb: bool = False,
     additional_entries: Mapping[str, float] | None = None,
 ) -> dict[str, float]:
     """Compute accuracy and fairness metrics and log them.
@@ -74,22 +70,17 @@ def compute_metrics(
     )
     # replace the slash; it's causing problems
     metrics = {k.replace("/", "÷"): v for k, v in metrics.items()}
-    metrics = {f"{k} ({model_name})": v for k, v in metrics.items()}
-    if exp_name:
-        metrics = {f"{exp_name}/{k}": v for k, v in metrics.items()}
 
-    if use_wandb:
-        wandb_log(cfg.misc, metrics, step=step)
+    wandb.log(metrics, step=step)
 
-        if save_summary:
-            external = additional_entries or {}
+    if save_summary:
+        external = additional_entries or {}
 
-            for metric_name, value in metrics.items():
-                wandb.run.summary[metric_name] = value
-            for metric_name, value in external.items():
-                wandb.run.summary[metric_name] = value
+        for metric_name, value in metrics.items():
+            wandb.run.summary[metric_name] = value
+        for metric_name, value in external.items():
+            wandb.run.summary[metric_name] = value
 
-    log.info(f"Results for {exp_name or ''} ({model_name}):")
     print_metrics(metrics)
     return metrics
 
