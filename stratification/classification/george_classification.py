@@ -383,16 +383,13 @@ class GEORGEClassification:
                         co = self.criterion(logits, loss_targets, targets["subclass"].long())
                         loss, (_, corrects), _ = co
 
-                if loss_targets.size(1) == 1:
+                if logits.size(1) == 1:
                     hard_preds = logits.squeeze(1).round()
                 else:
                     hard_preds = torch.argmax(logits, 1)
                 predictions_ls.append(hard_preds)
                 superclass_labels_ls.append(targets["superclass"])
                 subclass_labels_ls.append(targets["subclass"])
-
-                if not save_activations:
-                    outputs["activations"].pop()  # delete activations
 
                 pbar.set_postfix(loss=loss.item(), acc=corrects.float().mean())
                 pbar.update()
