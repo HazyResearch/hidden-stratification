@@ -1,5 +1,7 @@
+from collections import defaultdict
 import logging
 import os
+from typing import Any
 
 import ethicml as em
 import numpy as np
@@ -8,7 +10,6 @@ from progress.bar import IncrementalBar as ProgressBar
 import torch
 import torch.optim as optimizers
 import torch.optim.lr_scheduler as schedulers
-from torch.tensor import Tensor
 from tqdm import tqdm
 
 from shared.utils.metrics import compute_metrics
@@ -330,33 +331,14 @@ class GEORGEClassification:
             for label_type in LABEL_TYPES
             if label_type in dataset.Y_dict.keys()
         }
-        outputs = {
-            "metrics": None,
-            "activations": [],
-            "superclass": [],
-            "subclass": [],
-            "true_subclass": [],
-            "alt_subclass": [],
-            "targets": [],
-            "probs": [],
-            "preds": [],
-            "losses": [],
-            "reweight": [],
-        }
+        outputs = defaultdict(list)
+        activations_handle = self._init_activations_hook(model, outputs["activations"])
         if optimize:
             progress_prefix = "Training"
             model.train()
         else:
             progress_prefix = "Evaluation"
             model.eval()
-
-        progress = self.config["show_progress"]
-        if progress:
-            bar = ProgressBar(progress_prefix, max=len(dataloader), width=50)
-
-        predictions_ls: list[Tensor] = []
-        superclass_labels_ls: list[Tensor] = []
-        subclass_labels_ls: list[Tensor] = []
 
         with tqdm(desc=progress_prefix, total=len(dataloader)) as pbar:
             for inputs, targets in dataloader:
@@ -372,7 +354,7 @@ class GEORGEClassification:
                     logits = model(inputs)
                     loss_targets = targets["superclass"]
                     co = self.criterion(logits, loss_targets, targets["subclass"].long())
-                    loss, (_, corrects), _ = co
+                    loss, (losses, corrects), _ = co
                     self.optimizer.zero_grad()
                     loss.backward()
                     self.optimizer.step()
@@ -381,28 +363,43 @@ class GEORGEClassification:
                         logits = model(inputs)
                         loss_targets = targets["superclass"]
                         co = self.criterion(logits, loss_targets, targets["subclass"].long())
-                        loss, (_, corrects), _ = co
+                        loss, (losses, corrects), _ = co
 
                 if logits.size(1) == 1:
-                    hard_preds = logits.squeeze(1).round()
+                    probs = logits.sigmoid().squeeze()
+                    preds = probs.round()
                 else:
-                    hard_preds = torch.argmax(logits, 1)
-                predictions_ls.append(hard_preds)
-                superclass_labels_ls.append(targets["superclass"])
-                subclass_labels_ls.append(targets["subclass"])
+                    probs = logits.softmax(dim=1)
+                    preds = logits.argmax(dim=1)
+                outputs["probs"].append(probs.detach().cpu())
+                outputs["preds"].append(preds.detach().cpu())
+                outputs["losses"].append(losses.detach().cpu())
+                outputs["targets"].append(loss_targets.detach().cpu())
 
                 pbar.set_postfix(loss=loss.item(), acc=corrects.float().mean())
                 pbar.update()
+                if not save_activations:
+                    outputs['activations'].pop()  # delete activations
 
-        superclass_labels = pd.DataFrame(torch.cat(superclass_labels_ls).detach().cpu().numpy())
-        subclass_labels = pd.DataFrame(torch.cat(subclass_labels_ls).detach().cpu().numpy())
+        outputs_cat = {}
+        for key, value in outputs.items():
+            if value:
+                value = torch.cat(value, dim=0).numpy()
+            outputs_cat[key] = value
+        del outputs
+
+        superclass_labels = pd.DataFrame(outputs_cat["superclass"], columns=["superclass"])
+        subclass_labels = pd.DataFrame(outputs_cat["subclass"], columns=["subclass"])
         actual = em.DataTuple(x=subclass_labels, s=subclass_labels, y=superclass_labels)
-        predictions = em.Prediction(pd.Series(torch.cat(predictions_ls).detach().cpu().numpy()))
-        outputs["metrics"] = compute_metrics(
+        predictions = em.Prediction(pd.Series(outputs_cat["preds"]))
+        outputs_cat["metrics"] = compute_metrics(
             predictions=predictions, actual=actual, s_dim=dataset.get_num_classes("subclass")
         )
 
-        return outputs["metrics"], outputs
+        if activations_handle:
+            activations_handle.remove()
+
+        return outputs_cat["metrics"], outputs_cat
 
     def _update_metrics(self, metric_meters, acc, loss, losses, corrects, batch_size, reweight_vec):
         """Helper function to update metric meters given network outputs."""
@@ -628,24 +625,10 @@ class GEORGEClassification:
         if is_best:
             self._save(data, f"best_model.pt")
 
-        if self.compute_auroc:
-            save_metrics = [
-                "val_auroc",
-                "val_subclass_rob_auroc",
-                "val_true_subclass_rob_auroc",
-                "val_alt_subclass_rob_auroc",
-            ]
-        else:
-            save_metrics = [
-                "val_acc",
-                "val_acc_rw",
-                "val_subclass_rob_acc",
-                "val_subclass_rob_acc_rw",
-                "val_true_subclass_rob_acc",
-            ]
+        save_metrics = ["val_Accuracy", "val_Renyi preds and s"]
 
         for metric in save_metrics:
-            if metrics[metric] > self.state["best_" + metric]:
+            if metric not in self.state or metrics[metric] > self.state["best_" + metric]:
                 self.state["best_" + metric] = metrics[metric]
                 self._save(data, f"best_{metric}_model.pt")
 

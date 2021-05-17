@@ -121,9 +121,8 @@ class AutoKMixtureModel:
             cluster_obj = self.gen_inner_cluster_obj(k)
             pred_labels = cluster_obj.fit_predict(activ)
             logger.info('Clustering done, computing score...')
-            cluster_sizes = compute_group_sizes(pred_labels)
             if search:
-                local_sils, global_sil = get_cluster_sils(
+                local_sils, _ = get_cluster_sils(
                     activ, pred_labels, compute_sil=True, cuda=self.sil_cuda
                 )
                 clustering_score = np.mean(list(local_sils.values()))
