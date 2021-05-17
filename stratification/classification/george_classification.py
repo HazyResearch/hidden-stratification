@@ -299,7 +299,7 @@ class GEORGEClassification:
         save_activations=False,
         reweight=False,
         bit_pretrained=False,
-        adv_metrics=False
+        adv_metrics=False,
     ):
         """Runs the model on a given dataloader.
 
@@ -394,12 +394,12 @@ class GEORGEClassification:
                 pbar.set_postfix(loss=loss.item(), acc=corrects.float().mean())
                 pbar.update()
 
-        superclass_labels = pd.Series(torch.cat(superclass_labels_ls).detach().cpu().numpy())
-        subclass_labels = pd.Series(torch.cat(subclass_labels_ls).detach().cpu().numpy())
-        actual = em.DataTuple(x=subclass_labels, s=subclass_labels, y=superclass_labels) # type: ignore
+        superclass_labels = pd.DataFrame(torch.cat(superclass_labels_ls).detach().cpu().numpy())
+        subclass_labels = pd.DataFrame(torch.cat(subclass_labels_ls).detach().cpu().numpy())
+        actual = em.DataTuple(x=subclass_labels, s=subclass_labels, y=superclass_labels)
         predictions = em.Prediction(pd.Series(torch.cat(predictions_ls).detach().cpu().numpy()))
         outputs["metrics"] = compute_metrics(
-            predictions=predictions, actual=actual, s_dim=len(subclass_labels.unique())
+            predictions=predictions, actual=actual, s_dim=dataset.get_num_classes("subclass")
         )
 
         return outputs["metrics"], outputs
