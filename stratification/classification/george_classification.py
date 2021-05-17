@@ -9,7 +9,7 @@ import torch
 import torch.optim as optimizers
 import torch.optim.lr_scheduler as schedulers
 from torch.tensor import Tensor
-import tqdm
+from tqdm import tqdm
 
 from shared.utils.metrics import compute_metrics
 from stratification.classification.datasets import GEORGEDataset, LABEL_TYPES
