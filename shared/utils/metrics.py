@@ -8,11 +8,6 @@ import ethicml as em
 import pandas as pd
 import wandb
 
-from .utils import wandb_log
-
-if TYPE_CHECKING:
-    from shared.configs import BaseConfig
-
 
 __all__ = ["compute_metrics", "make_tuple_from_data", "print_metrics", "write_results_to_csv"]
 
@@ -39,9 +34,6 @@ def compute_metrics(
     predictions: em.Prediction,
     actual: em.DataTuple,
     s_dim: int,
-    step: int | None = None,
-    save_summary: bool = False,
-    additional_entries: Mapping[str, float] | None = None,
 ) -> dict[str, float]:
     """Compute accuracy and fairness metrics and log them.
 
@@ -70,17 +62,6 @@ def compute_metrics(
     )
     # replace the slash; it's causing problems
     metrics = {k.replace("/", "÷"): v for k, v in metrics.items()}
-
-    wandb.log(metrics, step=step)
-
-    if save_summary:
-        external = additional_entries or {}
-
-        for metric_name, value in metrics.items():
-            wandb.run.summary[metric_name] = value
-        for metric_name, value in external.items():
-            wandb.run.summary[metric_name] = value
-
     print_metrics(metrics)
     return metrics
 

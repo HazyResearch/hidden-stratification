@@ -1,4 +1,3 @@
-from functools import partial
 import logging
 import os
 
@@ -6,9 +5,7 @@ import ethicml as em
 import numpy as np
 import pandas as pd
 from progress.bar import IncrementalBar as ProgressBar
-import sklearn.metrics
 import torch
-import torch.nn.functional as F
 import torch.optim as optimizers
 import torch.optim.lr_scheduler as schedulers
 from torch.tensor import Tensor
@@ -17,18 +14,9 @@ import tqdm
 from shared.utils.metrics import compute_metrics
 from stratification.classification.datasets import GEORGEDataset, LABEL_TYPES
 from stratification.classification.losses import init_criterion
-from stratification.classification.utils import (
-    AverageMeter,
-    compute_accuracy,
-    compute_roc_auc,
-)
+from stratification.classification.utils import AverageMeter
 from stratification.utils.logger import init_epoch_logger, init_logger
-from stratification.utils.utils import (
-    concatenate_iterable,
-    format_timedelta,
-    get_learning_rate,
-    move_to_device,
-)
+from stratification.utils.utils import get_learning_rate, move_to_device
 
 PROGRESS_BAR_SUFFIX = (
     "({batch}/{size}) Time {total:} | ETA {eta:} | "
@@ -309,7 +297,9 @@ class GEORGEClassification:
         dataloader,
         optimize=False,
         save_activations=False,
+        reweight=False,
         bit_pretrained=False,
+        adv_metrics=False
     ):
         """Runs the model on a given dataloader.
 
