@@ -6,6 +6,7 @@
     "log_offline": false,
     "bias_config": "cmnist/no_bias",
     "data_config": "cmnist/odd_even",
+    "data_split_seed": 42,
     "classification_config": {
         "model": "lenet4",
         "checkpoint_metric": "val_Accuracy",
