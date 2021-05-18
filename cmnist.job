@@ -6,4 +6,4 @@
 #SBATCH --output=./myjob-%j.out
 # ----------------------
 python run.py configs/mnist_george_config.json data_config=cmnist/2dig \
-    bias_config=cmnist/2dig/subsampled allow_multigpu=True
+    bias_config=cmnist/2dig/subsampled allow_multigpu=True "$@"
