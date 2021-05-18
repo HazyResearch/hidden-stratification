@@ -161,21 +161,16 @@ class GEORGECluster:
         group_to_data, group_assignments = split_inputs
         group_to_metrics = {}
         group_to_outputs = {}
-        cluster_floor = 0
         for group, group_data in group_to_data.items():
             self.logger.info(f'Evaluating group {group}...')
 
             group_outputs = group_data.copy()
             cluster_model = group_to_models[group]
             assignments = np.array(cluster_model.predict(group_data['activations']))
-            group_outputs['assignments'] = cluster_floor + assignments
+            group_outputs['assignments'] = assignments
 
             group_to_outputs[group] = group_outputs
             group_to_metrics[group] = self.compute_metrics(group_data, assignments)
-
-            # update cluster_floor to ensure disjoint assignments
-            k = get_k_from_model(cluster_model)  # accounts for degenerate cases
-            cluster_floor = cluster_floor + k
 
         outputs = self._ungroup(group_to_outputs, group_assignments)
         return group_to_metrics, outputs
