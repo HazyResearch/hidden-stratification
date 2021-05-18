@@ -1,12 +1,8 @@
 {
     "exp_dir": "checkpoints/celebA",
     "dataset": "celeba",
-    "bias_config_path": "celeba/no_smiling_females",
-    "data_config_path": "celeba/gender_smiling",
-    "data_config_kwargs": {
-        "data_split_seed": 0,
-        "epochs": 40,
-    }
+    "bias_config": "celeba/no_smiling_females",
+    "data_config": "celeba/gender_smiling",
     "mode": "george",
     "data_split_seed": 0,
     "seed": 0,
