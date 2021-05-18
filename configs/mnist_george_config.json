@@ -17,13 +17,13 @@
             "class_name": "Adam"
         },
         "criterion_config": {},
-        "workers": 0,
+        "workers": 8,
         "eval_only": false,
         "metric_types": [
             "loss",
             "acc"
         ],
-        "num_epochs": 5,
+        "num_epochs": 100,
         "batch_size": 128,
         "scheduler_config": {
             "class_args": {
@@ -54,7 +54,7 @@
             "acc"
         ],
         "search_k": false,
-        "overcluster": false,
+        "overcluster": true,
         "max_k": 2,
     }
 }
