@@ -8,7 +8,7 @@
     "data_config": "cmnist/odd_even",
     "classification_config": {
         "model": "lenet4",
-        "checkpoint_metric": "val_acc_rw",
+        "checkpoint_metric": "val_Accuracy",
         "optimizer_config": {
             "class_args": {
                 "lr": 0.002,
@@ -35,7 +35,7 @@
             "class_name": "MultiStepLR"
         },
         "gdro_config": {
-            "checkpoint_metric": "val_subclass_rob_acc_rw",
+            "checkpoint_metric": "val_Accuracy",
             "optimizer_config": {
                 "class_args": {}
             },
@@ -55,6 +55,6 @@
         ],
         "search_k": false,
         "overcluster": true,
-        "max_k": 2
+        "max_k": 2,
     }
 }

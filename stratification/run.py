@@ -132,11 +132,12 @@ def main() -> None:
             )
 
         set_seed(config['seed'], use_cuda)  # reset random state
+        cluster_label_path = os.path.join(cluster_dir, 'clusters.pt')
         dataloaders = harness.get_dataloaders(
             config,
             mode='george',
             data_config=biased_data_config,
-            subclass_labels=os.path.join(cluster_dir, 'clusters.pt'),
+            subclass_labels=cluster_label_path,
             use_cuda=use_cuda,
         )
         model = harness.get_nn_model(config, num_classes=num_classes, mode='george')
