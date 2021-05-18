@@ -1,0 +1,9 @@
+#!/bin/bash
+# --- slurm settings ---
+#SBATCH --partition=goedel
+#SBATCH --gpus=1
+#SBATCH --job-name=george-celeba
+#SBATCH --output=./myjob-%j.out
+# ----------------------
+python run.py configs/celeba_george_config.json data_config=celeba/gender_smiling \
+    bias_config=celeba.no_smiling_females allow_multigpu=True
